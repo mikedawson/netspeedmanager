@@ -1,0 +1,145 @@
+<lexicon lang="en-us">
+<entry>
+        <base>FORM_TITLE</base>
+        <trans>Bandwidth Management by Group</trans>
+</entry>
+<entry>
+        <base>FORM_DESCRIPTION</base>
+    <trans>
+        <![CDATA[
+        <p>You can set bandwidth options by group below.  First put users in the group by clicking members.  Please note this is a different membership to <b>collaboration</b>.  One user 
+	can be a member of multiple system groups, but not multiple bandwidth groups (because the bandwidth can only be counted once).  Then click the modify button next to the group
+	you wish to change options for.  You can set default bandwidth per user in the group and control the total amount of bandwidth given to a group as a whole.
+        ]]>
+      </trans>
+</entry>
+<entry>
+        <base>BWLIMIT_CURRENT_QUOTAS</base>
+        <trans>Current Groups' Bandwidth Quotas</trans>
+</entry>
+<entry>
+	     <base>LABEL_USER</base>
+	     <trans>Group</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITDAILY</base>
+	     <trans>Daily Limit (MB Tokens)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITWEEKLY</base>
+	     <trans>Weekly Limit (MB Tokens)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITMONTHLY</base>
+	     <trans>Monthly Limit (MB Tokens)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITRATEDOWN</base>
+	     <trans>Member default Download Allocated Rate (kbps)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITCEILDOWN</base>
+	     <trans>Member default Download Max Rate (kbps)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITRATEUP</base>
+	     <trans>Member default Upload Allocated Rate (kbps)</trans>
+</entry>
+<entry>
+             <base>LABEL_BWLIMITCEILUP</base>
+	     <trans>Member default Upload Max Rate (kbps)</trans>
+</entry>
+
+<entry>
+        <base>LABEL_HTTPSNOPROXY</base>
+        <trans>Block https access not via proxy (required for https filtering).</trans>
+</entry>
+
+<entry>
+	<base>BWMembers</base>
+	<trans>Members</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_GROUP_DEFDESC</base>
+	<trans>
+	<![CDATA[
+	<h2>Default per user settings</h2>
+	<p>These settings will be the default applied to each user in the group</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>DESC_BWLIMITGROUP</base>
+	<trans>
+	<![CDATA[
+	<h2>Group total rates</h2>
+	<p>These rates apply to the group as a whole.  This allows you to control bandwidth by department for example.</p>
+	<p>You must set <b>Control group rates as a whole</b> to Yes in order for this to take effect.  You can set the parent
+	group to make this a sub group of the parent (e.g. sub department).</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_GROUPISCLASS</base>
+	<trans>Control group rates as a whole</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_PARENTGROUPCLASS</base>
+	<trans>Parent Group</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMITGROUPRATEDOWN</base>
+	<trans>Group Total Download Allocated Rate (kbps)</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMITGROUPCEILDOWN</base>
+	<trans>Group Max Download Rate (kbps)</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMITGROUPRATEUP</base>
+	<trans>Group Total Upload Allocated Rate (kbps)</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMITGROUPCEILUP</base>
+	<trans>Group Total Upload Max Rate (kbps)</trans>
+</entry>
+
+<entry>
+	<base>DESC_APPLYMETHOD</base>
+	<trans>
+	<![CDATA[
+	<h2>Apply Method</h2>
+	<p>You can override already set values for the users (default) now by setting the group valaue.  If you want
+	to leave some exceptions, select set as group default only. If the user has a higher rate or quota set
+	they will automatically receive that, if not the group default imit will apply.</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>LABEL_APPLYMETHOD</base>
+	<trans>Apply Method</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_GROUP_FILTERDESC</base>
+	<trans>
+	<![CDATA[
+	<h2>Filtering Options</h2>
+	<p>You can choose to block sites for each list and each time range.  If you choose '-' no policy will be applied,
+	access attempts made during this time to sites on that list will be blocked.  This will apply to all members.
+	</p>
+	]]>
+	</trans>
+</entry>
+
+</lexicon>
+

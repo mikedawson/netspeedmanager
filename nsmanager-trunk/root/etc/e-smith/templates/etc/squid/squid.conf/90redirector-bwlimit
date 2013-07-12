@@ -1,0 +1,11 @@
+{
+    #
+    # Use the redirect_program if we are using a ByIP or ProxyAuth bandwidth limiter
+    # setup.
+    #
+
+    if($BWLimitSetupType eq "ByIP" || $BWLimitSetupType eq "ProxyAuth") {
+        $OUT .= "redirect_program /usr/bin/squidguard -c /etc/squid/squidguard.conf\n"
+    }
+}
+

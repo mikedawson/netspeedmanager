@@ -1,0 +1,43 @@
+#!/bin/bash
+
+CURRENTEXTERNAL=$(/sbin/e-smith/config getprop ExternalInterface Name)
+PRIMARYEXTERNAL=$(/sbin/e-smith/config getprop wanbackup primaryinterfacename)
+DBCMD="/sbin/e-smith/db configuration "
+
+
+if [ "$CURRENTEXTERNAL" != "$PRIMARYEXTERNAL" ]; then
+	EXTERNALIP=$(ifconfig $PRIMARYEXTERNAL | awk '/inet addr/ {split ($2,A,":"); print A[2]}')
+
+	
+	$DBCMD set ExternalIP $EXTERNALIP
+
+	$DBCMD setprop ExternalInterface Name "$PRIMARYEXTERNAL" IPAddress "$EXTERNALIP"
+	$DBCMD setprop wanbackup currentconnection primary
+
+	PRIMARYDNS1=$(/sbin/e-smith/config getprop wanbackup PrimaryDNS1)
+	PRIMARYDNS2=$(/sbin/e-smith/config getprop wanbackup PrimaryDNS2)
+	
+	if [ "$PRIMARYDNS1" != "" ]; then
+		/sbin/e-smith/config setprop dnscache Forwarder $PRIMARYDNS1
+	fi
+
+	if [ "$PRIMARYDNS2" != "" ]; then
+		/sbin/e-smith/config setprop dnscache Forwarder2 $PRIMARYDNS2	
+	else
+		/sbin/e-smith/config delprop dnscache Forwarder2
+	fi
+
+	echo /sbin/e-smith/expand-template /etc/rc.d/init.d/masq
+	/sbin/e-smith/expand-template /etc/rc.d/init.d/masq
+
+	read JOE
+
+	/sbin/e-smith/expand-template /etc/htb-gen/htb-gen.conf
+	
+	/sbin/e-smith/signal-event dns-update
+	/sbin/e-smith/signal-event ip-change $EXTERNALIP
+
+	/etc/init.d/masq restart
+	/usr/lib/bwlimit/bwlimit_startup
+fi
+

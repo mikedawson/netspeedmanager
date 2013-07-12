@@ -1,0 +1,8 @@
+#!/bin/sh
+
+#
+# Service wrapper for sec
+#
+exec 2>&1
+
+exec /usr/lib/bwlimit/sec/sec.pl -conf=/usr/lib/bwlimit/sec/sec.cfg -input=/var/log/dhcpd/current

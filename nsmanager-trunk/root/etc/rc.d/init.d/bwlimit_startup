@@ -1,0 +1,32 @@
+#!/bin/bash
+
+start() {
+       /usr/lib/bwlimit/bwlimit_startup &
+       echo $! > /var/nsm/bwlimit_startup.pid
+}
+
+stop() {
+        kill -9 `cat /var/nsm/bwlimit_startup.pid`
+	rm -f /var/nsm/bwlimit_startup.pid
+}
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	stop
+	start
+	;;
+  *)
+	# do not advertise unreasonable commands that there is no reason
+	# to use with this device
+	echo $"Usage: $0 {start|stop|restart|reload}"
+	exit 1
+esac
+
+exit 0
+

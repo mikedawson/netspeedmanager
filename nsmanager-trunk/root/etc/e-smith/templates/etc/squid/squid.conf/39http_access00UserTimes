@@ -1,0 +1,102 @@
+{
+    #this will list all the time / user combos that are in the config database
+
+    #go through the list of users
+
+    use esmith::bwlimit::bwlimit_utils;
+    use esmith::FormMagick;
+    use esmith::AccountsDB;
+    use esmith::ConfigDB;
+
+    my $db = esmith::ConfigDB->open();
+    my $adb = esmith::AccountsDB->open();
+
+    my @group_list = $adb->groups;
+    my @user_list = $adb->users;
+    my @account_list = ();
+
+    push(@account_list, @user_list);
+    push(@account_list, @group_list);
+    
+    
+
+    my $acl_main_property_db = $db->get("BWLimitACLs");
+    my $acl_main_property = $acl_main_property_db->value;
+    
+
+    #section for users quite the same really...
+    for my $current_user (@account_list) {
+        my $current_user_deny_str = $current_user->prop('BWLimitACLDeny');
+        my $current_user_allow_str = $current_user->prop('BWLimitACL');
+        my $current_username = $current_user->key;
+        my $acct_type = $current_user->prop("type");
+	if($acct_type =~ /group/) {
+		my $bwlimit_group_members = $current_user->prop("BWGroupMembers") || "";
+		if($bwlimit_group_members eq "") {
+			$OUT .= "# skip  group no members $current_username\n";
+			next;
+		}
+	}
+        
+        #because this section should always come last
+        my @always_allow = ();
+        my @always_deny = ();
+
+        if($current_user_deny_str) {
+            my @current_user_deny_parts = split(/,/, $current_user_deny_str);
+            for my $deny_part (@current_user_deny_parts) {
+                my @deny_sections = split(/:/, $deny_part);
+                my $timerange_name = $deny_sections[0];
+                my $aclname = $deny_sections[1];
+
+		#check this acl is valid and has not actually been deleted
+		my $acl_substr = $aclname . ",";
+		if($acl_main_property  =~ m/$acl_substr/) {
+			
+			#check that this timerange exists
+			if($db->get_prop("BWLimitTimes", "timerange_time_" . $timerange_name)) {
+                
+	                	#only use this ACL if it is for squid - not others...
+		                if($aclname =~ m/^squid_(.*)$/) {
+        		            my $line = "http_access deny useracl_$current_username timerange_time_$timerange_name $aclname\n";
+                		    $line .= "http_reply_access deny useracl_$current_username timerange_time_$timerange_name $aclname\n";
+				    $line .= "http_access deny CONNECT useracl_$current_username timerange_time_$timerange_name $aclname\n";
+		                    if($timerange_name =~ m/^always$/) {
+        	        	        push(@always_deny, $line);
+	        	            }else {
+        	        	        $OUT .= $line;
+                	    	    }
+                		}
+			}
+		}
+            }
+        }
+
+        if($current_user_allow_str) {
+            my @current_user_allow_parts = split(/,/, $current_user_allow_str);
+            for my $allow_part (@current_user_allow_parts) {
+                my @allow_sections = split(/:/, $allow_part);
+                my $timerange_name = $allow_sections[0];
+                my $aclname = $allow_sections[1];
+                my $line .= "http_access allow useracl_$current_username timerange_time_$timerange_name $aclname\n";
+                if($timerange_name =~ m/^always$/) {
+                    push(@always_allow, $line);
+                }else {
+                    $OUT .= $line;
+                }
+            }
+        }
+
+        for my $always_deny_section (@always_deny) {
+            $OUT .= $always_deny_section;
+        }
+
+        for my $always_allow_section (@always_allow) {
+            $OUT .= $always_allow_section;
+        }
+
+
+    }
+
+
+}

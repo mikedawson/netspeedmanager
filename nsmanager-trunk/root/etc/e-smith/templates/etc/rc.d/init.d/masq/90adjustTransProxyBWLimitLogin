@@ -1,0 +1,26 @@
+{
+   #override default - make it go for login
+   # after login an insert will happen for all authorized clients
+    my $rule = 4;
+    
+
+    my $transproxy = $squid{Transparent} || "yes";
+    my $status = $squid{status} || "disabled";
+    if ($transproxy eq "yes" && $status eq "enabled")
+    {
+     	my $proxyport = $squid{TransparentPort} || "3128";
+
+        # Otherwise, divert port 80 traffic through our proxy
+
+	$OUT .= "/sbin/iptables --table nat --delete TransProxy -p TCP -j DNAT --to $LocalIP:$proxyport\n";
+
+	$OUT .= "CURRENT_RULE=\$(/sbin/iptables -t nat -L TransProxy -n | tail -n 1 | grep '0.0.0.0.*:6443')\n";
+	$OUT .= "if [ \"\$CURRENT_RULE\" == \"\" ]; then\n";
+            $OUT .= "/sbin/iptables --table nat --append TransProxy -p TCP -j DNAT --to $LocalIP:6443\n";
+    	$OUT .= "fi\n";
+
+        #$OUT .= "    /sbin/iptables --table nat --replace TransProxy $rule\\\n";
+        #$OUT .= "\t-p TCP -j DNAT --to $LocalIP:6443\n";
+    }
+
+}

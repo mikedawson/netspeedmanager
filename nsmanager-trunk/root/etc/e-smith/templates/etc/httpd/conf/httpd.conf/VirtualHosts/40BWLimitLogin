@@ -1,0 +1,32 @@
+{
+    #
+    #  Template for making web accessible the bandwidth limit system login
+    #  and user feedback tools.
+    #
+
+    
+        
+        $OUT .= "       Alias /bwlimit /usr/lib/bwlimit/web\n";
+	$OUT .= "     ScriptAlias /bwlimit-cgi-bin/ /usr/lib/bwlimit/cgi-bin/\n";
+
+        $OUT .= "<Directory /usr/lib/bwlimit/web>\n"
+                    . "     AddType application/x-httpd-php .php .php3\n"
+                    . "</Directory>\n";
+
+        $OUT .= "   <Location /bwlimit>\n"
+                ."      order deny,allow\n"
+                ."      deny from all\n"
+                ."      allow from $localAccess $externalSSLAccess\n"
+                ."  </Location> \n";
+    
+
+        $OUT .= "   <Location /bwlimit-cgi-bin>\n"
+                ."	order deny,allow\n"
+                ."	deny from all\n"
+                ."	allow from $localAccess $externalSSLAccess\n"
+                ."  </Location> \n";
+
+
+
+}
+

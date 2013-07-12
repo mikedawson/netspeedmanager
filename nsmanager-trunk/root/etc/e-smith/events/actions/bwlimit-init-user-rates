@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#
+# Script to run after creating a username to make sure that 
+# needed properties have sensible default values
+#
+
+#event name = 1 argument = 2
+USERNAME=$2
+
+echo "Executing $0 with args $@" >> /root/userinitlog
+
+if [ "$USERNAME" != "" ]; then
+
+	DBCMD="/sbin/e-smith/db configuration "
+
+	MAXUP=$($DBCMD getprop BWLimit totalup)
+	MAXDOWN=$($DBCMD getprop BWLimit totaldown)
+
+	MAXUPUSER=$(( $MAXUP - 50 ))
+	MAXDOWNUSER=$(( $MAXDOWN - 50 )) 
+
+	/sbin/e-smith/db accounts setprop $USERNAME BWLimitDaily 1000 BWLimitWeekly 5000 BWLimitMonthly 20000 BWLimitRateDown 64 BWLimitCeilDown $MAXDOWNUSER BWLimitRateUp 32 BWLimitCeilUp $MAXDOWNUSER
+else 
+	echo "usage : $0 username"
+fi
+
+

@@ -1,0 +1,62 @@
+#!/usr/bin/perl -w
+
+use esmith::Build::CreateLinks qw(:all);
+use File::Basename;
+
+my $panel = "manager";
+panel_link("bwlimit", $panel);
+panel_link("bwlimit_customlist", $panel);
+panel_link("bwlimit_groups", $panel);
+panel_link("bwlimit_mainopts", $panel);
+panel_link("bwlimit_timeranges", $panel);
+
+my $event = "user-modify";
+event_link("bwlimit_check_reset", "user-modify", "60");
+event_link("bwlimit-init-user-rates", "user-create", "59");
+event_link("bwlimit_check_reset", "user-create", "60");
+event_link("bwlimit_check_reset", "user-delete", "60");
+
+event_link("bwlimit_check_reset", "group-modify", "60");
+event_link("bwlimit_check_reset", "group-create", "60");
+event_link("bwlimit_check_reset", "group-delete", "60");
+
+#generate class ids for each group
+event_link("bwlimit-init-group-classid", "group-create", "59");
+
+#for when a user is created - put a quota on it
+event_link("bwlimit-init-user-rates", "user-create", "59");
+
+# Events for restarting services
+#safe_symlink("sighup", "root/etc/e-smith/events/user-modify/services2adjust/squid");
+#safe_symlink("sighup", "root/etc/e-smith/events/group-modify/services2adjust/squid");
+safe_symlink("sighup", "root/etc/e-smith/events/bwlimit-full-update/services2adjust/squid");
+
+
+#links for bwlimit-full-update
+event_link("bwlimit_compute_quotas", "bwlimit-full-update", "10");
+event_link("bwlimit_reset_masq", "bwlimit-full-update", "30");
+event_link("bwlimit_reset_rates", "bwlimit-full-update", "40");
+
+
+
+
+safe_symlink("/etc/nsm.conf.php", "root/usr/lib/bwlimit/bwlimit-config.php");
+safe_symlink("/etc/rc.d/init.d/e-smith-service", "root/etc/rc.d/rc7.d/S99bwlimit_startup");
+safe_symlink("/etc/rc.d/init.d/e-smith-service", "root/etc/rc.d/rc7.d/S99nsmcalcbytes");
+safe_symlink("/etc/rc.d/init.d/e-smith-service", "root/etc/rc.d/rc7.d/S99nsmdhcpsec");
+
+safe_symlink("daemontools", "root/etc/rc.d/init.d/nsmcalcbytes");
+safe_symlink("daemontools", "root/etc/rc.d/init.d/nsmdhcpsec");
+
+#note - wanswitcher disabled and 100% not supported for now
+
+#safe_symlink("/etc/rc.d/init.d/e-smith-service", "root/etc/rc.d/rc7.d/S99wanswitcher");
+#safe_symlink("/etc/rc.d/init.d/e-smith-service", "root/etc/rc.d/rc7.d/S99wanbackup");
+#safe_symlink("daemontools", "root/etc/rc.d/init.d/wanbackup");
+#safe_symlink("daemontools", "root/etc/rc.d/init.d/wanswitcher");
+
+#safe_symlink("/var/service/wanswitcher", "root/service/wanswitcher");
+#safe_symlink("/var/service/wanbackup", "root/service/wanbackup");
+safe_symlink("/var/service/nsmcalcbytes", "root/service/nsmcalcbytes");
+safe_symlink("/var/service/nsmdhcpsec", "root/service/nsmdhcpsec");
+

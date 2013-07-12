@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -x $(/sbin/e-smith/db configuration getprop wanbackup usb3ginitscript) ]; then
+	source $(/sbin/e-smith/db configuration getprop wanbackup usb3ginitscript) || 0
+fi
+
+wvdial --config /etc/wanbackup-wvdial.conf init connector
+
+

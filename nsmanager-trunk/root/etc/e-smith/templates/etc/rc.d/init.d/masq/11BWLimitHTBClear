@@ -1,0 +1,2 @@
+#as this will clear the mangle chain
+/usr/lib/bwlimit/htb-gen clear_all

@@ -1,0 +1,48 @@
+
+$BWLIMIT_DBHOST="localhost";
+$BWLIMIT_DBNAME="bwlimits";
+$BWLIMIT_DBUSER="bwlimit";
+$BWLIMIT_DBPASS="{ $BWLimit{DbPassword} }";
+$BWLIMIT_SQUIDACCESSLOG_FILE="/var/log/squid/access.log";
+$BWLIMIT_DEBUGOUTPUT=1;
+
+$BWLIMIT_HOSTNAME="{ $SystemName }.{ $DomainName }";
+
+$BWLIMIT_UPDATEFILTER = `/sbin/e-smith/db configuration get BWLimitUpdateFilter`;
+
+$BWLIMIT_EXCEEDPOLICY="{ $BWLimit{exceedpolicy} }";
+
+$BWLIMIT_DEPRIORATE="{ $BWLimit{depriorate} }";
+
+
+$BWLIMIT_OVERQUOTAPAGE="http://{ $SystemName }.{ $DomainName }/bwlimit/overquota.php";
+
+$BWLIMIT_OPTIONS = array();
+
+
+//used to calculate time saving
+
+
+//These here mostly for debugging purposes
+
+//This will be set by getting it out of the database - for the moment just a var (val in seconds)
+//for web logins
+$ip_activity_timeout = { $BWLimit{sessiontime} };
+$BWLIMIT_OPTIONS['ip_activity_timeout'] = { $BWLimit{sessiontime} };
+
+//timeout if user is connecting through dhcp...
+$dhcp_timeout = 86400;
+
+//this for additional accounting and debugging
+$DEBUG_CRON = 1;
+
+$cron_debug_fd = null;
+
+$cron_debug_log_file = "/var/log/nsm-cron.log";
+
+$BWLIMIT_SPEEDCHECK_WAITTIME="{ $BWLimit{CalcBandwidthWaitTime} }";
+
+$BWLIMIT_SPEEDCHECK_COUNTTIME="{ $BWLimit{CalcBandwidthCountTime} }";
+
+//Default lease time (in seconds)
+$BWLIMIT_DHCP_DEFAULTLEASETIME=86400;

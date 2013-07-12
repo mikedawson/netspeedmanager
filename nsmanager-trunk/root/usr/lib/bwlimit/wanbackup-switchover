@@ -1,0 +1,136 @@
+#!/bin/bash
+#
+# Switchover script to swap between connections (primary and wan backup)	
+#
+
+TARGETCON=$1
+
+DBCMD="/sbin/e-smith/db configuration getprop wanbackup "
+
+EXTERNALIFPROPERTIES="Broadcast Configuration Driver Gateway HWAddress IPAddress Name Netmask Network"
+
+#
+# This function exists for after we are done setting
+# properties
+#
+function doipchange {
+	NEWIP=$1
+        /sbin/e-smith/expand-template /etc/rc.d/init.d/masq
+        /sbin/e-smith/expand-template /etc/htb-gen/htb-gen.conf
+
+	/sbin/e-smith/signal-event ip-change $NEWIP
+        /sbin/e-smith/signal-event dns-update
+	
+}
+
+#
+# Exists to copy over a set of properties.  Can also use a prefix
+# Designed to copy/save the external interface info for when we 
+# go to using backup connection
+#
+function xferproperties {
+	PROPLIST=$1
+	FROMENTRY=$2
+	FROMPREFIX=$3
+	TOENTRY=$4
+	TOPREFIX=$5
+	
+	for propname in $PROPLIST; do
+		PROPVAL=$(/sbin/e-smith/db configuration getprop $FROMENTRY "$FROMPREFIX$propname")
+		/sbin/e-smith/db configuration setprop $TOENTRY $TOPREFIX$propname "$PROPVAL"
+	done
+}
+
+CURRENTCON=$($DBCMD currentconnection)
+
+if [ "$TARGETCON" == "backup" ]; then
+	# check and make sure the connection exists
+	BACKUPDEV=$($DBCMD current_backup_dev)
+	BACKUPDEVLINE=$(cat /proc/net/dev | grep $BACKUPDEV)
+	if [ "$BACKUPDEVLINE" == "" ]; then
+		echo "Sorry - backup dev does not actually exist right now"
+	else
+		#Find info about the real primary backup connection that we are going to have to save 
+		#save that in other properties
+		if [ "$CURRENTCON" == "primary" ]; then
+			xferproperties "$EXTERNALIFPROPERTIES" "ExternalInterface" "" "wanbackup" "primarysave_"
+	        	/sbin/e-smith/db configuration setprop wanbackup PrimaryExternalIP $(/sbin/e-smith/db configuration get	ExternalIP)
+			/sbin/e-smith/db configuration setprop wanbackup PrimaryDNS1 "$(/sbin/e-smith/db configuration getprop dnscache Forwarder)"
+	                /sbin/e-smith/db configuration setprop wanbackup PrimaryDNS2 "$(/sbin/e-smith/db configuration getprop dnscache Forwarder2)"
+			/sbin/e-smith/db configuration setprop wanbackup PrimaryGateway $(route -n | grep '^0.0.0.0' | awk ' { print $2 } ')
+		fi
+
+		/sbin/e-smith/db configuration setprop ExternalInterface Name $($DBCMD current_backup_dev)
+		/sbin/e-smith/db configuration set ExternalIP $($DBCMD current_backup_ip)
+		/sbin/e-smith/db configuration setprop dnscache Forwarder $($DBCMD current_backup_dns1)
+		/sbin/e-smith/db configuration setprop dnscache Forwarder2 $($DBCMD current_backup_dns2)
+	
+		#remove current default route
+		route del -net 0.0.0.0
+
+		NEWGW=$($DBCMD current_backup_gateway)
+		GWSECTION=" gw $NEWGW "
+		if [ "$NEWGW" == "0.0.0.0" ]; then
+			#ppp connection
+			GWSECTION=" "		
+		fi
+
+		route add -net 0.0.0.0 $GWSECTION dev $($DBCMD current_backup_dev)
+
+		doipchange $($DBCMD current_backup_ip)
+
+		#/sbin/e-smith/expand-template /etc/rc.d/init.d/masq
+		#/sbin/e-smith/expand-template /etc/htb-gen/htb-gen.conf
+
+        
+		#/sbin/e-smith/signal-event ip-change $($DBCMD current_backup_ip)
+        	#/sbin/e-smith/signal-event dns-update
+
+		#this somehow gets flipped - put it back
+        	/sbin/e-smith/db configuration setprop ExternalInterface Name $($DBCMD current_backup_dev)
+
+
+	        /etc/init.d/masq restart
+	
+		/usr/lib/bwlimit/bwlimit_startup
+
+		#Now we are done - set the connection property
+		/sbin/e-smith/db configuration setprop wanbackup currentconnection backup
+		/usr/bin/mysql --defaults-file=/root/.my.cnf bwlimits -e 'update process_log set connection_note = "Backup 3G" '
+	fi	
+elif [ "$TARGETCON" == "primary" ]; then
+	PRIMARYINTERFACE=$($DBCMD primarysave_Name)
+        if [ "$CURRENTCON" == "backup" ]; then
+	        xferproperties "$EXTERNALIFPROPERTIES" "wanbackup" "primarysave_" "ExternalInterface" ""
+		echo "dumping props after xfer"
+		/sbin/e-smith/db configuration show ExternalInterface
+		/sbin/e-smith/db configuration set ExternalIP $($DBCMD PrimaryExternalIP)
+		/sbin/e-smith/db configuration setprop dnscache Forwarder "$($DBCMD PrimaryDNS1)"
+		echo                 /sbin/e-smith/db configuration setprop dnscache Forwarder "$($DBCMD PrimaryDNS1)"
+
+		PrimaryDNS2=$($DBCMD PrimaryDNS2)
+		if [ "$PrimaryDNS2" != "" ]; then
+			/sbin/e-smith/db configuration setprop dnscache Forwarder2 "$($DBCMD $PrimaryDNS2)"
+		else
+			/sbin/e-smith/db configuration delprop dnscache Forwarder2
+		fi
+	fi	
+	
+	NEWIP=$(/sbin/e-smith/db configuration get ExternalIP)
+	doipchange $NEWIP
+        /sbin/e-smith/db configuration setprop ExternalInterface Name $PRIMARYINTERFACE
+
+
+	#change gateway back
+	route del -net 0.0.0.0
+	route add -net 0.0.0.0 gw $($DBCMD PrimaryGateway)
+	
+	/etc/init.d/masq restart
+	/usr/lib/bwlimit/bwlimit_startup
+	
+	/sbin/e-smith/db configuration setprop wanbackup currentconnection primary
+  	/usr/bin/mysql --defaults-file=/root/.my.cnf bwlimits -e 'update process_log set connection_note = "Primary" '
+fi
+
+/usr/lib/bwlimit/bwlimit-reset-rates
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# Reset all bwlimit rates etc.  This is now all done inside
+# the masq script
+#
+
+/etc/init.d/masq restart
+

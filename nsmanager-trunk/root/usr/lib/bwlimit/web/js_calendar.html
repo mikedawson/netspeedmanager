@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>Cross browser javascript calendar</title>
+	<meta http-equiv='content-type' content='text/html; charset=UTF-8'/>
+	<style type="text/css">
+	body{
+		/*
+		You can remove these four options 
+		
+		*/
+		background-repeat:no-repeat;
+		font-family: Trebuchet MS, Lucida Sans Unicode, Arial, sans-serif;
+		margin:0px;
+		
+
+	}
+	#ad{
+		padding-top:220px;
+		padding-left:10px;
+	}
+	</style>
+	<link type="text/css" rel="stylesheet" href="dhtmlgoodies_calendar/dhtmlgoodies_calendar.css?random=20051112" media="screen"></LINK>
+
+
+	<SCRIPT type="text/javascript" src="dhtmlgoodies_calendar/dhtmlgoodies_calendar.js?random=20060118"></script>
+	
+</head>
+<body>
+<form name="input" action="get_connectivity_info.php" method="get" onsubmit='return convertTime()'>
+
+
+<table>
+	
+		<tr><td>From: </td><td><td><input type="text" value="2012/06/02 12:55" readonly name="theDate3"><input type="button" value="Cal" onclick="displayCalendar(document.forms[0].theDate3,'yyyy/mm/dd hh:ii',this,true)"></td>
+<td>to: </td><td><td><input type="text" value="2012/06/02 12:55" readonly name="theDate4"><input type="button" value="Cal" onclick="displayCalendar(document.forms[0].theDate4,'yyyy/mm/dd hh:ii',this,true)"></td><td><input type="submit" value="Submit" /></td>
+</tr>
+
+	
+</table>
+</form>
+<div id="debug"></div>
+
+</body>
+</html>

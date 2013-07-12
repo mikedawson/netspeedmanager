@@ -1,0 +1,105 @@
+
+#slidetemplatecontainer {
+	display: none;
+}
+
+#maintable {
+	width: 760px;
+	background-color: gray;
+	border-collapse: collapse;
+}
+
+#maintable TD {
+}
+
+#slideContainer {
+	width: 760px;
+	height: 540px;
+	background-color: white;
+	line-height: 480px;
+}
+
+#storyuserpic {
+	width: 0px;
+	height: 150px;
+	background-color: green;
+	border: 2px solid red;
+	display: none;
+}
+
+#numloadedspan {
+	
+}
+
+#totalnumberspan {
+	
+}
+
+#slideContainerTd {
+	width: 760px;
+}
+
+.button{
+	width: 32px;
+	height: 32px;
+	display: block;
+	border: 2px black;
+	background-color: gray;
+	text-align: center;
+	line-height: 32px;
+	vertical-align: middle;
+	font-weight: bold;
+	color: white;
+	cursor: pointer;
+}
+
+#textContainer {
+	font: 11pt arial, sans-serif;
+	height: 320px;
+	padding: 8px;
+	display: none;
+
+}
+
+#textContainer { 
+	display: none; 
+
+}
+
+
+#picarea {
+	height: 150px;
+	padding: 2px;
+	font: italic 10pt arial, sans-serif;
+}
+
+#picarea IMG {
+	margin-right: 0px;
+	display: none;
+}
+
+.typeCursor {
+	font-weight: bold;
+	color: red;
+}
+
+#barContainer TD{
+	font: 8pt bold arial, sans-serif;
+	height: 30px;
+
+}
+
+#barContainer TABLE {
+	border-width: 1px;
+}
+
+BODY {
+	background-color: lightgray;
+}
+
+#maintitle {
+	font: bold 20pt arial, sans-serif;
+	text-align: center;
+	color: white;
+	margin: 5px;
+}

@@ -1,0 +1,21 @@
+[Dialer init]
+Modem = /dev/ttyUSB2
+Init2 = ATZ
+Init3 = ATQ0 V1 E1 S0=0 &C1 &D2 +FCLASS=0
+#Stupid Mode = 1
+Modem Type = Analog Modem
+Phone = *99#
+#Carrier Ckeck = No
+#FlowControl = NOFLOW
+ISDN = 0
+username = KPN
+Dial Command = ATDT
+Password = gprs
+Baud = 115200
+Carrier Check = no
+
+[Dialer connector]
+Init5 = AT+CGDCONT=1,"IP","{ $wanbackup{usb3gapn} }"
+
+
+

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#call reset rates
+
+echo "Full update done on $(date)" > /root/fullupdate
+/usr/lib/bwlimit/bwlimit-reset-rates

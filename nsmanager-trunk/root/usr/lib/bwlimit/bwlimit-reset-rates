@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# Reset all bwlimit rates etc.  Will delete all qdisc, restart
+# all iptables / firewall and then run bwlimit_startup to activate
+# active clients again
+#
+/usr/lib/bwlimit/htb-gen clear_all >/dev/null
+/usr/lib/bwlimit/bwlimit_startup >/dev/null
+

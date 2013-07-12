@@ -1,0 +1,5 @@
+
+FILEURL={ $BWLimit{CalcBandwidthURL} }
+WAITTIME={ $BWLimit{CalcBandwidthWaitTime} }
+COUNTTIME={ $BWLimit{CalcBandwidthCountTime} }
+

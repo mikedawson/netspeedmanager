@@ -1,0 +1,40 @@
+<lexicon lang="en-us"> 
+<entry>
+        <base>FORM_TITLE</base>
+        <trans>Create and Customized Site List </trans>
+</entry>
+<entry>
+        <base>FORM_DESCRIPTION</base>
+    <trans>
+        <![CDATA[
+        <p>Create a group of sites ease sites management
+        ]]>
+      </trans>
+</entry>
+<entry>
+        <base>CREATE_CUSTOM_LISTS</base>
+        <trans>Create Custom List</trans>
+</entry>
+<entry>
+        <base>BWLIMIT_CUSTOM_LISTS</base>
+        <trans>Custom List</trans>
+</entry>
+		<entry>
+		<base>LABEL_CUSTOMLIST_NAME</base>
+		<trans> Customized List Name</trans>
+                </entry>
+                <entry>
+                <base>LABEL_CUSTOMLIST_DATA</base>
+		<trans>Customized List Data</trans>
+                </entry>
+                <entry>
+             	<base>LABEL_CUSTOMLIST_NAME</base>
+		<trans>Customized List Name</trans>
+                </entry>
+
+<entry>
+	<base>CREATE_CUSTOM_LIST</base>
+	<trans>Create New Custom List</trans>
+</entry>
+
+</lexicon>

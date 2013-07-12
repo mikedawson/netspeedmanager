@@ -1,0 +1,27 @@
+{
+	use esmith::ConfigDB;
+
+	#
+	# For each of the time ranges that are in the config database make a squid ACL
+	# for this timerange.
+	#
+	
+	my $db = esmith::ConfigDB->open();
+
+	my $bwtimeprops = $db->get("BWLimitTimes");
+
+	if($bwtimeprops) {
+		for my $bwtimeprop ($bwtimeprops->props) {
+			if($bwtimeprop =~ m/^timerange_time_(.*)$/) {
+				my $timerange_name = $bwtimeprop;
+		       		$timerange_name =~ m/^timerange_time_(.*)/;
+            			$timerange_name = $1;
+
+				$timerange_time = $bwtimeprops->prop($bwtimeprop);
+
+				$OUT .= "acl " . $bwtimeprop . " time " . $timerange_time . "\n";
+			}
+		}
+
+	}
+}

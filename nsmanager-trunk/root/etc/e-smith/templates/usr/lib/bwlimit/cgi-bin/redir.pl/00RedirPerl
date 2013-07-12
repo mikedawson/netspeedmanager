@@ -1,0 +1,23 @@
+
+
+use strict;
+use warnings;
+use CGI;
+use URI::Escape;
+
+my $cgi = CGI->new();
+
+my $redir = $cgi->param('redir');
+my $redir_encoded = uri_escape($redir);
+my $link = "https://{$SystemName}.{$DomainName}/bwlimit/bwlimit_userlogin.php?redir=" . $redir_encoded ;
+
+print "Content-Type: text/html\n";
+print "Status: 302 Moved Temporarily\n";
+print "Location: $link\n\n";
+print "Cache-Control: no-store, no-cache\n";
+print "Expires: -1\n";
+#print "Refresh: 0; URL=$link\n\n";
+
+print "<html><body>Click <a href=\"$link\">Here</a></body></html>";
+
+

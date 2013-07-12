@@ -1,0 +1,7 @@
+
+{
+	if($wanbackup{setup} ne "none") {	
+		$OUT .= "/sbin/iptables -A \$NEW_local_chk -s " . $wanbackup{primarytestip} . "/255.255.255.255 -j ACCEPT \n";
+		$OUT .= "/sbin/iptables -A \$NEW_local_chk -s $wanbackup{backuptestip}/255.255.255.255 -j ACCEPT \n";
+	}
+}

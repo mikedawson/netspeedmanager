@@ -1,0 +1,68 @@
+#! /bin/sh
+
+exec 2>&1
+config=$(/sbin/e-smith/config getprop wanbackup setup)
+
+primarydowncount=0
+backupdowncount=0
+
+#Number of consecutive failures to switchover to backup
+SWITCHTOBACKUP_THRESHOLD=3
+
+#number of consecutive oks to switch back to primary
+SWITCHTOPRIMARY_THRESHOLD=1
+
+#wait for connections to stablize before running this service
+
+if [ "$config" != "none" ]; then
+	while sleep 10; do
+		primaryok=1
+		backupok=1
+
+		primarytestip=$(/sbin/e-smith/db configuration getprop wanbackup primarytestip)
+		backuptestip=$(/sbin/e-smith/db configuration getprop wanbackup backuptestip)
+		
+		echo ping -c2 -w 2 $primarytestip
+		ping -c2 -w 2 $primarytestip
+		if [ $? -eq 0 ]; then
+			echo "Primary OK"
+			primarydowncount=0
+		else
+			echo "Primary Down"
+			primarydowncount=$(( $primarydowncount + 1 ))
+			primaryok=0
+		fi
+
+		echo ping -c2 -w 2 $backuptestip
+		ping -c2 -w 2 $backuptestip
+
+		if [ $? -eq 0 ]; then
+			echo "Backup OK"
+			backupdowncount=0
+		else
+			echo "Backup Down"
+			backupdowncount=$(( $backupdowncount + 1 ))
+			backupok=0
+		fi
+
+		currentconnection=$(/sbin/e-smith/db configuration getprop wanbackup currentconnection)
+		if [ "$currentconnection" == "primary" ]; then
+			if [ $primarydowncount -ge $SWITCHTOBACKUP_THRESHOLD ]; then
+				echo "switching to backup"
+				/usr/lib/bwlimit/wanbackup-switchover backup
+			fi
+		fi
+
+		if [ "$currentconnection" == "backup" ]; then
+			if [ $primaryok == 1 ]; then
+				echo "Switching to primary"
+				/usr/lib/bwlimit/wanbackup-switchover primary
+			fi
+		fi
+
+	done
+fi
+
+
+echo script run.$config not found - please report this as a bug
+sleep 100

@@ -1,0 +1,30 @@
+ping -c2 8.8.8.8
+if [ $? -eq 0 ]
+then
+internet=1 
+#internet=`echo $?`
+fi
+x=`route -n|grep ^0.0.0.0|tr -s ' '|cut -f2 -d' '`
+ping -c2 $x
+if [ $? -eq 0 ]
+then
+#ISPgateway=`echo $?`
+ISPgateway=1
+fi
+ping -c2 dnscheck.paiwastoon.net
+if [ $? -eq 0 ]
+then
+#domain_name=`echo $?`
+domain_name=1
+fi
+if [ $internet = 1 -a $domain_name = 1 -a $ISPgateway = 1 ]
+then
+total_connectivity=1
+echo 0
+else
+total_connectivity=0
+echo 1
+fi 
+mysql bwlimits -e "insert into connectivity_check (internet,ISP_gateway,domain_name,stamp_inserted,total_connectivity) values (b'$internet',b'$ISPgateway',b'$domain_name','$(date '+%s')',b'$total_connectivity');"
+
+

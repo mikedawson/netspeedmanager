@@ -1,0 +1,103 @@
+{
+
+
+$OUT .= "dbhome /usr/local/squidGuard/db \n";
+$OUT .= "logdir /usr/local/squidGuard/log \n";
+
+
+$OUT .= "dest porn {\n";
+$OUT .= "       domainlist      porn/domains\n";
+$OUT .= "        urllist         porn/urls\n";
+$OUT .= "        redirect        http://www.google.com/?q=ethics\n";
+$OUT .= "}\n";
+
+$OUT .= "dest ads {\n";
+$OUT .= "       domainlist      ads/domains\n";
+$OUT .= "       urllist         ads/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest audio-video {\n";
+$OUT .= "       domainlist      audio-video/domains\n";
+$OUT .= "       urllist         audio-video/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest gambling {\n";
+$OUT .= "       domainlist      gambling/domains\n";
+$OUT .= "       urllist         gambling/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest mail {\n";
+$OUT .= "       domainlist      mail/domains\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest proxy {\n";
+$OUT .= "       domainlist      proxy/domains\n";
+$OUT .= "       urllist         proxy/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest spyware {\n";
+$OUT .= "       domainlist      spyware/domains\n";
+$OUT .= "       urllist         spyware/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest violence {\n";
+$OUT .= "       domainlist      violence/domains\n";
+$OUT .= "       urllist         violence/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest aggressive {\n";
+$OUT .= "       domainlist      aggressive/domains\n";
+$OUT .= "       urllist         aggressive/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest drugs {\n";
+$OUT .= "       domainlist      drugs/domains\n";
+$OUT .= "       urllist         drugs/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest hacking {\n";
+$OUT .= "       domainlist      hacking/domains\n";
+$OUT .= "       urllist         hacking/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest redirector {\n";
+$OUT .= "       domainlist      redirector/domains\n";
+$OUT .= "       urllist         redirector/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest suspect {\n";
+$OUT .= "       domainlist      suspect/domains\n";
+$OUT .= "       urllist         suspect/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+$OUT .= "dest warez {\n";
+$OUT .= "       domainlist      warez/domains\n";
+$OUT .= "       urllist         warez/urls\n";
+$OUT .= "       redirect        http://www.google.com/\n";
+$OUT .= "}\n";
+
+#$OUT .= "dest black {\n";
+#$OUT .= "       domainlist      black/domains\n";
+#$OUT .= "       urllist         black/urls\n";
+#$OUT .= "       redirect        http://www.google.com/\n";
+#$OUT .= "}\n";
+
+#$OUT .= "dest white {\n";
+#$OUT .= "       domainlist      white/domains\n";
+#$OUT .= "       urllist         white/urls\n";
+#$OUT .= "       redirect        http://www.google.com/\n";
+#$OUT .= "}\n";
+
+}

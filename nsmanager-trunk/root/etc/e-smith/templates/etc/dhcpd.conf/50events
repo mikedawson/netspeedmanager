@@ -1,0 +1,20 @@
+
+#
+# Events here to notify Net Speed Manager about DHCP Events
+#
+# Note - the standard CentOS version of DHCP 3.0.5 does not
+# support the execute statement.  This is fed to sec.
+#
+on commit \{
+    set ClientIP = binary-to-ascii(10, 8, ".", leased-address);
+    set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
+    log(concat("NSMEvent commit ", ClientIP, "  ", ClientMac));
+\}
+
+on expiry \{
+    set ClientIP = binary-to-ascii(10, 8, ".", leased-address);
+    set ClientMac = binary-to-ascii(16, 8, ":", substring(hardware, 1, 6));
+    log(concat("NSMEvent expiry ", ClientIP, "  ", ClientMac));
+\}
+
+

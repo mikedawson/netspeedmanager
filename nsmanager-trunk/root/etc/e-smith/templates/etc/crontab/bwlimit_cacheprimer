@@ -1,0 +1,13 @@
+{
+
+	if($BWLimit{CachePrimer} eq "yes") {
+		my $starttime = $BWLimit{CachePrimerStartTime};
+		my @timeparts = split(/:/, $starttime);	
+		$OUT .= "#Net Speed Manager overnight cache prime job\n";
+		$OUT .= $timeparts[1] . " " . $timeparts[0] . " * * * root /usr/lib/bwlimit/bwlimit-cache-primer.pl\n";
+	}else {
+		$OUT .= "#Net Speed Manager Cache Prime job disabled - see BWLimit CachePrimer property\n";
+	}
+
+
+}

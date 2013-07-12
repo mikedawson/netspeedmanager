@@ -1,0 +1,14 @@
+{
+    #Make a proxy authentication setup if this is the type of setup that we are
+    #using
+
+    $OUT.= "http_access allow localmachine\n";
+
+    if ($BWLimitSetupType eq "ProxyAuth") {
+        $OUT .= "http_access allow authenticated\n"
+             ."http_access deny localnetwork\n";
+    }else {
+        $OUT .= "http_access allow localnetwork\n";
+    }
+}
+

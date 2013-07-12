@@ -1,0 +1,17 @@
+Listen 0.0.0.0:6443
+
+<VirtualHost 0.0.0.0:6443>
+
+    ServerName _default_
+    
+    SetEnv force-response-1.0
+    SetEnv downgrade-1.0 
+    SetEnv nokeepalive
+ 
+    RewriteEngine on
+    RewriteRule   ^.* https://{ $SystemName }.{ $DomainName }/bwlimit-cgi-bin/redir.pl?redir=http://%\{HTTP_HOST\}%\{REQUEST_URI\} [P]
+    
+    DocumentRoot /usr/lib/bwlimit/web
+
+</VirtualHost>
+

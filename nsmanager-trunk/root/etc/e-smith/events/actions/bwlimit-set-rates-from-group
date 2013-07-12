@@ -1,0 +1,43 @@
+#!/usr/bin/perl -wT
+
+#
+# This will be a perl script that will open up the config database and set
+# all of the bandwidth limits (groups and users) according to the values there.
+#
+# This is by default as generous as possible; e.g. users will get the highest
+# quota out of the groups that they are members of, or if their individual
+# quota is higher then that one will be used
+#
+
+use strict;
+use warnings;
+
+
+use esmith::bwlimit::bwlimit_utils;
+use esmith::FormMagick;
+use esmith::AccountsDB;
+use esmith::ConfigDB;
+
+
+our $db = esmith::ConfigDB->open();
+our $adb = esmith::AccountsDB->open();
+
+my $groupname = $ARGV[0];
+$groupname =~ /\w+/;
+
+my $group_rec = $adb->get($groupname);
+my $bwgroup_members_str = $group_rec->prop("BWGroupMembers");
+my @bwgroup_members_arr = split(/,/, $bwgroup_members_str);
+
+my @prop_list = ("BWLimitRateDown", "BWLimitCeilDown", "BWLimitRateUp", "BWLimitCeilUp", "BWLimitDaily", "BWLimitWeekly", 
+	"BWLimitMonthly", "BWLimit_blockdirecthttps");
+
+for my $current_member (@bwgroup_members_arr) {
+	my $user_rec = $adb->get($current_member);
+	for my $current_property (@prop_list) {
+		my $prop_value = $group_rec->prop($current_property);
+		$user_rec->set_prop($current_property, $prop_value);
+	}
+}
+
+

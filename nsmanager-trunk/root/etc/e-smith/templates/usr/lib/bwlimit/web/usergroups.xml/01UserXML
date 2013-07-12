@@ -1,0 +1,13 @@
+{
+	use esmith::AccountsDB;
+
+	our $adb = esmith::AccountsDB->open();
+
+	our @user_list = $adb->users;
+
+	for my $current_user (@user_list) {
+		my $usergroup = $current_user->prop("BWLimitCountGroup") || "unsorted";
+		my $username = $current_user->key;
+		$OUT .= "<user id='$username' group='$usergroup'/>\n";
+	}
+}

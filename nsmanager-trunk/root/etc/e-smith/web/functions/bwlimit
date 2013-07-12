@@ -1,0 +1,106 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Per User
+ # navigation  : 3000 3150
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()">
+
+         <description>FORM_DESCRIPTION</description>
+      
+         
+
+         <subroutine src="print_bwlimit_table_users()" />
+     </page>
+
+     <page name="BWLIMIT_PAGE_USAGE"
+            pre-event="turn_off_buttons()" >
+
+        <description>BWLIMIT_USAGE_DESC</description>
+        <subroutine src="print_usage_summary()" />
+        <subroutine src="print_button('Back to List')" />
+     </page>
+
+
+     <page name="BWLIMIT_PAGE_MODIFY"
+             pre-event="turn_off_buttons()"
+             post-event="modify_bwlimit()" >
+
+         <description>BWLIMIT_TITLE</description>
+
+         <field type="literal" id="User" >
+             <label>LABEL_USER</label>
+         </field>
+
+         <field type="text" id="BWLimitDaily" validation="integer">
+             <label>LABEL_BWLIMITDAILY</label>
+         </field>
+
+	 <field type="text" id="BWLimitWeekly" validation="integer">
+             <label>LABEL_BWLIMITWEEKLY</label>
+         </field>
+
+         <field type="text" id="BWLimitMonthly" validation="integer">
+             <label>LABEL_BWLIMITMONTHLY</label>
+         </field>
+
+	 <field type="text" id="BWLimitRateDown" validation="integer">
+	     <label>LABEL_BWLIMITRATEDOWN</label>
+	 </field>
+
+         <field type="text" id="BWLimitCeilDown" validation="validate_rate(BWLimitRateDown, BWLimitCeilDown)">
+	     <label>LABEL_BWLIMITCEILDOWN</label>
+	 </field>
+
+         <field type="text" id="BWLimitRateUp" validation="integer">
+	     <label>LABEL_BWLIMITRATEUP</label>
+	 </field>
+	
+	 <field type="text" id="BWLimitCeilUp" validation="validate_rate(BWLimitRateUp, BWLimitCeilUp)">
+	     <label>LABEL_BWLIMITCEILUP</label>
+	 </field>
+
+	<!--
+         <field type="text" id="BWLimitMACAddress">
+            <label>LABEL_BWLIMITMACADDRESS</label>
+         </field>
+
+        <field type="text" id="BWLimitMACAddress2">
+            <label>LABEL_BWLIMITMACADDRESS2</label>
+        </field>
+
+	-->
+
+        <field type="text" id="staticip" validation="validate_static_ip_field">
+            <label>LABEL_STATICIP</label>
+        </field>
+
+	<field type="select" options="'' => '-', 'n' => 'No', 'y' => 'Yes'" id='BWLimit_blockdirecthttps'>
+	    <label>LABEL_HTTPSNOPROXY</label>
+	</field>
+
+	<field type="select" id="BWLimitCountGroup" options="get_user_group_options()">
+	    <label>LABEL_BWUSERGROUP</label>
+	</field>
+
+         <subroutine src="print_aclist_table()" />
+
+         <subroutine src="print_button('SAVE')" />
+     </page>
+ </form>
+
+

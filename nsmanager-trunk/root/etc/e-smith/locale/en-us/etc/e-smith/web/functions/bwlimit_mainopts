@@ -1,0 +1,259 @@
+<lexicon lang="en-us">            
+<entry>
+        <base>FORM_TITLE</base>
+        <trans>Main Options</trans>
+</entry>
+<entry>
+        <base>FORM_DESCRIPTION</base>
+    <trans>
+        <![CDATA[
+        <p> Set the main options that applies on all connected clients
+        ]]>
+      </trans>
+</entry>
+<entry>
+        <base>BWLIMIT_CURRENT_QUOTAS</base>
+        <trans>Current Groups' Bandwidth Quotas</trans>
+</entry>
+
+<entry>
+	    <base>LABEL_BWLIMIT_SETUP_TYPE</base>
+	     <trans>Setup Type</trans>
+</entry>
+
+<entry>
+	<base>LABEL_WANBACKUP_PRIMARYINTERFACENAME</base>
+	<trans>Primary External Interface</trans>
+</entry>
+
+<entry>
+            <base>LABEL_BWLIMIT_CACHE_SIZE</base>
+	     <trans>Cache Size</trans>
+</entry>
+<entry>
+            <base>LABEL_BWLIMIT_REPORTING_STYLE</base>
+	     <trans>Reporting Style</trans>
+</entry>
+<entry>
+            <base>LABEL_BWLIMIT_YELLOWLIGHT_THRESHOLD</base>
+	     <trans>Yellow-Light Threshold</trans>
+</entry>
+<entry>
+            <base>LABEL_BWLIMIT_REDLIGHT_THRESHOLD</base>
+	     <trans>Red-Light Threshold</trans>
+</entry>
+
+<entry>
+	<base>DESCRIPTION_TOTALS</base>
+	<trans>
+	<![CDATA[
+	<p>Enter the maximum download and uploads speeed of your connection.  This is used to schedule traffic.  Entering more here
+than is actually available can lead to competition between users not being as well managed as it otherwise would be, because if the 
+server is requesting more than is available your ISPs routers may reschedule the traffic.</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+            <base>LABEL_BWLIMIT_TOTAL_RATE_UP</base>
+	     <trans>Total Rate Up (kbps)</trans>
+</entry>
+<entry>
+            <base>LABEL_BWLIMIT_TOTAL_RATE_DOWN</base>
+	     <trans>Total Rate Down (kbps)</trans>
+</entry>
+<entry>
+            <base>LABEL_WANBACKUP_SETUP</base>
+             <trans>Backup WAN Setup Type</trans>
+</entry>
+<entry>
+            <base>LABEL_WANBACKUP_PRIMARYTESTIP</base>
+             <trans>Primary WAN test IP</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_BACKUPTESTIP</base>
+             <trans>Backup WAN test IP</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_ETHINTERFACE</base>
+             <trans>Ethernet interface for backup (dhcp/static)</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_STATICIP</base>
+             <trans>Ethernet Static IP</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_STATICGATEWAY</base>
+             <trans>Ethernet Static Gateway</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_STATICNETMASK</base>
+             <trans>Ethernet Static Netmask</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_STATICDNS</base>
+             <trans>Ethernet Static DNS</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_USB3GAPN</base>
+             <trans>USB 3G APN</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_USB3GUSERNAME</base>
+             <trans>USB 3G Username</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_USB3GPASSWORD</base>
+             <trans>USB 3G Password</trans>
+</entry>
+
+<entry>
+            <base>LABEL_WANBACKUP_USB3GINITSCRIPT</base>
+             <trans>USB 3G Init Script</trans>
+</entry>
+
+<entry>
+	<base>EXCEED_POLICY_DESCRIPTION</base>
+	<trans>
+	<![CDATA[
+	<p>Choose the policy that applies when a user exceeds their quota.  This can be either deprioritize to 
+	cut their reserved rate or automatic cutoff.  When deprioritize is selected, the Deprioritized rate
+	will override the user's normal reserved rates.</p>
+	
+	</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_EXCEEDPOLICY</base>
+	<trans>Action when users exceed quota</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_SESSIONTIME</base>
+	<trans>Web Login session inactivity timeout (hrs:mins)</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_DEPRIORATE</base>
+	<trans>Deprioritized transfer base rate (kbps)</trans>
+</entry>
+
+
+<entry>
+	<base>DESCRIPTION_DYNAMIC_APPLY</base>
+	<trans>
+	<![CDATA[
+	Net Speed Manager can use the results of the speed test to apply to maximum and user rates.  This is <b>experimental</b> and 
+not recommended.  If you have a busy server you can select to only check for policy changes every 5mins.  This will reduce interuptions
+when changing filtering policies etc.
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWLIMIT_USE_DYNAMIC_RATES</base>
+	<trans>Dynamically detect ISP speed / apply to max rates</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_CONFIGMETHOD</base>
+	<trans>Apply bandwidth policies immediately or check for changes every 5mins? (the latter is better for busy servers)</trans>
+</entry>
+
+<entry>
+	<base>BWCALC_DESCRIPTION</base>
+	<trans>
+	<![CDATA[
+		<p>The Speed Test runs every hour to check ISP performance.  It will start downloading from and uploading to 
+the test file URL.  It will measure the <b>TOTAL</b> speed running across the whole connection - not just the file that it
+downloads.  This means others can continue to use the connection and the result will still be accurate.  It will wait the defined
+wait time for a download to get started and then count over the defined count time.</p>
+
+		<p>Using a speed test website (e.g. speedtest.net) while others are using the connection or when
+other programs may be downloading <b>IS NOT ACCURATE</b> because it does not count the whole connection</p>
+
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_BWCALCURL</base>
+	<trans>Speed Test File URL</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_BWCALCWAIT</base>
+	<trans>Speed test wait time</trans>
+</entry>
+
+<entry>	
+	<base>BWLIMIT_BWCALCCOUNTTIME</base>
+	<trans>Speed test count time</trans>
+</entry>
+
+
+
+<entry>
+	<base>CACHEPRIME_DESCRIPTION</base>
+	<trans>
+	<![CDATA[
+	<p>The cache primer can download the most commonly accessed websites during offpeak time
+(e.g. overnight) so that they're already downloaded and faster in the morning.  This will not
+result in "old news" being kept - the header images, scripts, styles etc. can be kept and the 
+text will get updated automatically as per the instructions from the website</p>
+
+<p>To view the report on the last cache prime run - <a href='/bwlimit/cache-prime-report.html' target='_blank'>Click Here</a>.</p>
+
+	</p>
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_CACHEPRIMER</base>
+	<trans>Cache Primer Enabled</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_CACHEPRIMERSTARTTIME</base>
+	<trans>Start Time</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_CACHEPRIMERRUNTIME</base>
+	<trans>Cache Primer Run Time</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_CACHEPRIMERSPEEDLIMIT</base>
+	<trans>Cache Primer speed limit (kbps)</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_AUTORESETDESC</base>
+	<trans>
+	<![CDATA[
+	The <b>Auto Reset</b> group can be controlled by the admin to generate
+	new usernames and passwords daily (useful for a public hotspot style system).  To 
+	use this system <a href='/bwlimit/bwlimit_autoreset_password.php' target='_blank'>Click Here</a>.
+	]]>
+	</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_AUTORESETGROUP</base>
+	<trans>Auto-reset group</trans>
+</entry>
+
+</lexicon>

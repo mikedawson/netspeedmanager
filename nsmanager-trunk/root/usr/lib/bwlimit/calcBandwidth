@@ -1,0 +1,147 @@
+#!/bin/bash
+
+#get settings
+source /etc/bwlimit_calcbandwidth
+
+WORKDIR="/tmp/calcbandwidth_$(date '+%s')"
+
+mkdir $WORKDIR
+
+###FLOATING POINT STUFF
+float_scale=2
+
+function float_eval()
+{
+    local stat=0
+    local result=0.0
+    if [[ $# -gt 0 ]]; then
+        result=$(echo "scale=$float_scale; $*" | bc -q 2>/dev/null)
+        stat=$?
+        if [[ $stat -eq 0  &&  -z "$result" ]]; then stat=1; fi
+    fi
+    echo $result
+    return $stat
+}
+
+#Note that we're starting in the database
+/usr/lib/bwlimit/update_speed_test.php 0
+
+echo "File URL = $FILEURL"
+
+
+dd if=/dev/urandom of=$WORKDIR/nsm_randupload bs=1M count=20
+
+
+#get WGET PID
+x=`wget --no-cache  --delete-after -b -o $WORKDIR/calcBandwidth-wget.log --output-document=$WORKDIR/calcBandwidthDownload $FILEURL|head -1|cut -f 5 -d' '|cut -f1 -d .`
+
+curl -F myfile=@$WORKDIR/nsm_randupload $FILEURL &
+CURLPID=$!
+
+#sleep for some time to let it get started
+
+sleep $WAITTIME
+/usr/lib/bwlimit/update_speed_test.php 1
+
+# This shell script shows the network speed, both received and transmitted.
+
+# Usage: net_speed.sh interface
+#   e.g: net_speed.sh eth0
+
+
+# Global variables
+received_bytes=""
+old_received_bytes=""
+transmitted_bytes=""
+old_transmitted_bytes=""
+source /etc/htb-gen/htb-gen.conf
+interface=$iface_up
+
+# This function parses /proc/net/dev file searching for a line containing $interface data.
+# Within that line, the first and ninth numbers after ':' are respectively the received and transmited bytes.
+function get_bytes
+{
+line=$(cat /proc/net/dev | grep $interface | cut -d ':' -f 2 | awk '{print "received_bytes="$1, "transmitted_bytes="$9}')
+eval $line
+}
+
+
+# Function which calculates the speed using actual and old byte number.
+# Speed is shown in KByte per second when greater or equal than 1 KByte per second.
+# This function should be called each second.
+function get_velocity
+{
+value=$1    
+old_value=$2
+
+let vel=$value-$old_value
+#let velKB=$vel/1000
+#if [ $velKB != 0 ];
+#then
+#echo -n "$velKB KB/s";
+#else
+#echo -n "$vel B/s";
+echo $vel
+#fi
+}
+
+# Gets initial values.
+get_bytes
+old_received_bytes=$received_bytes
+old_transmitted_bytes=$transmitted_bytes
+
+# Shows a message and waits for one second.
+
+sleep $COUNTTIME
+
+# Get new transmitted and received byte number values.
+get_bytes
+
+# Calculates speeds.
+vel_recv=$(get_velocity $received_bytes $old_received_bytes)
+vel_trans=$(get_velocity $transmitted_bytes $old_transmitted_bytes)
+
+vel_recv=$(( $vel_recv / $COUNTTIME ))
+vel_trans=$(( $vel_trans / $COUNTTIME ))
+
+# Shows results in the console.
+echo -en "$interface DOWN:$vel_recv\tUP:$vel_trans\r"
+#echo ""
+# Update old values to perform new calculations.
+old_received_bytes=$received_bytes
+old_transmitted_bytes=$transmitted_bytes
+
+
+insert_time=$(date '+%s')
+/usr/lib/bwlimit/insert_speed_result.php $vel_recv $vel_trans $insert_time
+
+echo Done at $insert_time
+
+kill -9 $x
+kill $CURLPID
+
+rm -rf $WORKDIR
+
+#Note in the database that we are done
+/usr/lib/bwlimit/update_speed_test.php 2
+
+#echo checking dynamic rates....
+#check and see if dynamic bandwidth setting is enabled
+
+#only to be done as root when run from the cron job
+if [ "$(whoami)" == "root" ]; then
+	DYNAMICSET=$(/sbin/e-smith/db configuration getprop BWLimit useDynamicRates)
+
+	if [ "$DYNAMICSET" == "yes" ]; then
+		vel_recv_kbps=$(( $(($vel_recv / 1024)) * 8 ))
+		vel_trans_kbps=$(( $(($vel_trans / 1024)) * 8 ))
+		/sbin/e-smith/db configuration setprop BWLimit currentup $vel_trans_kbps currentdown $vel_recv_kbps
+		expand-template /etc/htb-gen/htb-gen.conf
+		/usr/lib/bwlimit/bwlimit-reset-rates
+
+		#find out the rate as a percentage of what we were promised
+		DOWNFACTOR=$(float_eval $vel_recv_kbps / $(/sbin/e-smith/db configuration getprop BWLimit totaldown) )
+		UPFACTOR=$(float_eval $vel_trans_kbps / $(/sbin/e-smith/db configuration getprop BWLimit totalup) )
+		mysql bwlimits -e "UPDATE process_log SET SpeedFactorDown=$DOWNFACTOR, SpeedFactorUp=$UPFACTOR"
+	fi
+fi

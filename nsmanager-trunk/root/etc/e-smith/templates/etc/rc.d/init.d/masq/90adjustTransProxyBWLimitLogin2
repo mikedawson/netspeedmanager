@@ -1,0 +1,4 @@
+#now that adjust is done run bwlimit_startup to add masquerading for active clients
+
+/usr/lib/bwlimit/bwlimit_startup
+

@@ -1,0 +1,18 @@
+
+#Preproxy chain for Net Speed Manager - makes sure that direct attempts
+# to talk with proxy are redirected as required before a user has logged in
+
+/sbin/iptables --table nat --new-chain PreProxy
+
+/sbin/iptables --table nat --append PREROUTING\
+    -p tcp --dport { $squid{TransparentPort} } --destination { $LocalIP } -j PreProxy
+
+/sbin/iptables --table nat --append PreProxy \
+    -p TCP -s { $LocalIP } -j ACCEPT
+
+/sbin/iptables --table nat --append PreProxy \
+    -p TCP -s { $ExternalIP } -j ACCEPT
+    
+/sbin/iptables --table nat --append PreProxy \
+    -p TCP -j DNAT --to { $LocalIP }:6443
+

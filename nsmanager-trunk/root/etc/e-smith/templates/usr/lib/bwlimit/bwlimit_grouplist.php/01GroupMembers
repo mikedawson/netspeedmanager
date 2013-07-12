@@ -1,0 +1,30 @@
+{
+
+    use esmith::AccountsDB;
+
+    my $db = esmith::ConfigDB->open();
+    my $adb = esmith::AccountsDB->open();
+    
+    my $current_group_name = $db->get_prop("BWLimit", "autoresetgroup") || "";
+    
+    if($current_group_name eq "") {
+        $OUT .= '$autoreset_users=array();\n';
+    }else {
+        my $current_group = $adb->get($current_group_name);
+        my $count = 0;
+        my @current_group_userlist = split(/,/, $current_group->prop('Members') || "");
+        $OUT .= '$autoreset_users=array(';
+        for my $current_group_member (@current_group_userlist) {
+	    if($count > 0) {
+		$OUT .= ",";
+	    }
+
+            $OUT .= "'" . $current_group_member . "'";
+	    $count++;
+        }
+	$OUT .= ");";
+    }
+    
+    
+}
+

@@ -1,0 +1,117 @@
+<lexicon lang="en-us">
+<entry>
+        <base>FORM_TITLE</base>
+        <trans>Bandwidth Management Per User</trans>
+</entry>
+
+<entry>
+	<base>BWLIMIT_TITLE</base>
+	<trans>
+	<![CDATA[
+	You can set the quotas and downloads rates for this user below.
+	]]>
+	</trans>
+</entry>
+
+<entry>
+        <base>FORM_DESCRIPTION</base>
+    <trans>
+        <![CDATA[
+        <p>You can set bandwidth settings for users on your system by clicking
+        the "Modify" button next to the user you wish to update.
+        ]]>
+      </trans>
+</entry>
+<entry>
+        <base>BWLIMIT_CURRENT_QUOTAS</base>
+        <trans>Current Users' Bandwidth Quotas</trans>
+</entry>
+<entry>            
+	     <base>LABEL_USER</base>
+	     <trans>User</trans>
+</entry>
+
+            
+<entry>            
+             <base>LABEL_BWLIMITDAILY</base>
+	     <trans>Daily Limit (MB Tokens)</trans>
+</entry>
+
+            
+<entry>            
+             <base>LABEL_BWLIMITWEEKLY</base>
+	     <trans>Weekly Limit (MB Tokens)</trans>
+</entry>  
+
+          
+<entry>            
+             <base>LABEL_BWLIMITMONTHLY</base>
+	     <trans>Monthly Rate (MB Tokens)</trans>
+</entry>
+
+            
+<entry>            
+	     <base>LABEL_BWLIMITRATEDOWN</base>
+	     <trans>Download Allocated Rate (kbps)</trans>
+</entry>
+
+            
+<entry>            
+	     <base>LABEL_BWLIMITCEILDOWN</base>
+	     <trans>Download Max Rate (kbps)</trans>
+</entry>  
+
+          
+<entry>            
+	     <base>LABEL_BWLIMITRATEUP</base>
+	     <trans>Upload Allocated Rate (kbps)</trans>
+</entry>      
+
+      
+<entry>            
+	     <base>LABEL_BWLIMITCEILUP</base>
+	     <trans>Upload Max Rate (kbps)</trans>
+</entry>
+
+            
+<entry>            
+            <base>LABEL_BWLIMITMACADDRESS</base>
+	     <trans>MAC Address</trans>
+</entry>
+
+            
+<entry>            
+            <base>LABEL_BWLIMITMACADDRESS2</base>
+	     <trans>MAC Address 2</trans>
+</entry>
+
+            
+<entry>            
+            <base>LABEL_STATICIP</base>
+	     <trans>Static IP</trans>
+</entry>            
+
+<entry>
+	<base>LABEL_HTTPSNOPROXY</base>
+	<trans>Block https access not via proxy (required for https filtering).</trans>
+</entry>
+
+<entry>
+	<base>LABEL_BWUSERGROUP</base>
+	<trans>Group to show bandwidth in on graph</trans>
+</entry>
+
+<entry>
+       	<base>BWLIMIT_USER_FILTERDESC</base>
+        <trans>
+       	<![CDATA[
+       	<h2>Filtering Options</h2>
+        <p>You can choose to block sites for each list and each time range.  If you choose '-' no policy will be applied,
+       	access attempts made during this time to sites on that list will be blocked.  This policy can be overriden by the group policy.
+        </p>
+       	]]>
+        </trans>
+</entry>
+
+
+</lexicon>

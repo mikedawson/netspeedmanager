@@ -1,0 +1,52 @@
+#!/bin/bash
+
+PIDFILE=/var/nsm/calcBytes.pid
+
+start() {
+	RUNNING=0
+	if [ -e $PIDFILE ]; then
+		kill -0 $(cat $PIDFILE)
+		if [ "$?" == "0" ]; then
+			RUNNING=1
+		fi
+	fi
+
+       if [ "$RUNNING" == "0" ]; then
+		if [ ! -e $(dirname $PIDFILE) ]; then
+			mkdir -p $(dirname $PIDFILE)
+		fi
+		
+	       /usr/lib/bwlimit/calcBytes &
+	       echo $! > $PIDFILE
+		echo "Started NSM calcBytes : OK"
+	else
+		echo "Cannot start calcBytes: already running	"
+	fi
+}
+
+stop() {
+        kill -9 $(cat $PIDFILE)
+	echo "Stopped NSM Calcbytes: OK"
+	rm -f $PIDFILE
+}
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	stop
+	start
+	;;
+  *)
+	# do not advertise unreasonable commands that there is no reason
+	# to use with this device
+	echo "Usage: $0 {start|stop|restart|reload}"
+	exit 1
+esac
+
+exit 0
+

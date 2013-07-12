@@ -1,0 +1,15 @@
+    usb3g)
+		/sbin/e-smith/db configuration setprop wanbackup current_backup_dns1 $DNS1
+		/sbin/e-smith/db configuration setprop wanbackup current_backup_dns2 $DNS2
+		/sbin/e-smith/db configuration setprop wanbackup current_backup_ip $NEWIP
+		/sbin/e-smith/db configuration setprop wanbackup current_backup_dev $NEWINTERFACE
+		/sbin/e-smith/db configuration setprop wanbackup current_backup_gateway 0.0.0.0
+		
+		#make sure that we have the test route correct
+		/usr/lib/bwlimit/wanbackup-addcheckroute
+
+                /sbin/e-smith/signal-event ip-up "$@"
+		
+                        ;;
+
+

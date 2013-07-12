@@ -1,0 +1,181 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Main Options
+ # navigation  : 3000 3150
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit_mainopts;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit_mainopts->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()" post-event="modify_bwmain_settings()">
+
+         <description>FORM_DESCRIPTION</description>
+
+         <field type="select"
+            id="BWLimitSetupType"
+            options="'ByIP' => 'HotSpot Style Login'"
+            value="get_setup_type()">
+            <label>LABEL_BWLIMIT_SETUP_TYPE</label>
+         </field>
+
+	<!--
+         <field type="text" id="bwlimit_cache_size">
+            <label>LABEL_BWLIMIT_CACHE_SIZE</label>
+         </field>
+
+         <field type="select" id="bwlimit_reporting_style"
+            options="'trafficlight' => 'Traffic Light Style', 'tokencount' => 'Token Count'"
+            value="get_reporting_style()">
+            <label>LABEL_BWLIMIT_REPORTING_STYLE</label>
+         </field>
+	
+
+         <field type="text" id="bwlimit_yellowlight_threshold">
+            <label>LABEL_BWLIMIT_YELLOWLIGHT_THRESHOLD</label>
+         </field>
+
+         <field type="text" id="bwlimit_redlight_threshold">
+            <label>LABEL_BWLIMIT_REDLIGHT_THRESHOLD</label>
+         </field>
+	-->
+
+	 <field type="select" id="bwlimit_exceedpolicy" value="get_exceedpolicy()" options="'deprio' => 'Deprioritize', 'cutoff' => 'Cutoff'">
+	    <description>EXCEED_POLICY_DESCRIPTION</description>
+	    <label>LABEL_BWLIMIT_EXCEEDPOLICY</label>
+	 </field>
+
+         <field type="text" id="bwlimit_depriorate" value="get_depriorate()" validation="integer">	    
+	    <label>LABEL_BWLIMIT_DEPRIORATE</label>
+	 </field>
+
+	<field type="select" id="bwlimit_sessiontime" value="get_sessiontime()" options="get_bwlimit_SessionTime_options()">
+	    <label>LABEL_BWLIMIT_SESSIONTIME</label>
+	</field>
+        
+         <field type="text" id="bwlimit_total_rate_up" value="get_total_up()" validation="integer">
+	    <description>DESCRIPTION_TOTALS</description>
+            <label>LABEL_BWLIMIT_TOTAL_RATE_UP</label>
+         </field>
+
+        <field type="text" id="bwlimit_total_rate_down" value="get_total_down()" validation="integer">
+            <label>LABEL_BWLIMIT_TOTAL_RATE_DOWN</label>
+        </field>
+
+	 <field type="select" id="bwlimit_useDynamicRates" value="get_useDynamicRates()" options="'yes' => 'Yes', 'no' => 'No'">
+	    <description>DESCRIPTION_DYNAMIC_APPLY</description>
+	    <label>LABEL_BWLIMIT_USE_DYNAMIC_RATES</label>
+	 </field>
+
+	<!--
+	 <field type="select" id="wanbackup_setup" value="get_wanbackup_setup()" options="'none' => 'None', 'dhclient' => 'DHCP Ethernet', 'static' => 'Static Ethernet', 'usb3g' => 'USB 3G'">
+	    <label>LABEL_WANBACKUP_SETUP</label>
+	 </field>
+
+	
+
+	 <field type="select" id="wanbackup_primaryinterfacename" value="get_wanbackup_primaryinterfacename()" 
+	options="get_wanbackup_primaryinterfacename_options()">
+		<label>LABEL_WANBACKUP_PRIMARYINTERFACENAME</label>
+	 </field>
+
+	 <field	type="text" id="wanbackup_primarytestip" value="get_wanbackup_primarytestip()">   
+            <label>LABEL_WANBACKUP_PRIMARYTESTIP</label>
+         </field>
+
+         <field type="text" id="wanbackup_backuptestip" value="get_wanbackup_backuptestip()">
+       	    <label>LABEL_WANBACKUP_BACKUPTESTIP</label>
+         </field>
+
+	 <field type="text" id="wanbackup_ethinterface" value="get_wanbackup_ethinterface()">
+		<label>LABEL_WANBACKUP_ETHINTERFACE</label>
+	 </field>
+
+	 <field type="text" id="wanbackup_staticip" value="get_wanbackup_staticip()">
+		<label>LABEL_WANBACKUP_STATICIP</label>
+	 </field>
+
+	 <field type="text" id="wanbackup_staticgateway" value="get_wanbackup_staticgateway()">
+		<label>LABEL_WANBACKUP_STATICGATEWAY</label>
+ 	 </field>
+
+	 <field	type="text" id="wanbackup_staticnetmask" value="get_wanbackup_staticnetmask()">
+                <label>LABEL_WANBACKUP_STATICNETMASK</label>
+ 	 </field>
+
+         <field type="text" id="wanbackup_staticdns" value="get_wanbackup_staticdns()">
+                <label>LABEL_WANBACKUP_STATICDNS</label>
+         </field>     
+
+	 <field type="text" id="wanbackup_usb3gapn" value="get_wanbackup_usb3gapn()">
+		<label>LABEL_WANBACKUP_USB3GAPN</label>
+	 </field>
+
+	 <field type="text" id="wanbackup_usb3gusername" value="get_wanbackup_usb3gusername()">
+		<label>LABEL_WANBACKUP_USB3GUSERNAME</label>
+	 </field>
+
+	 <field type="text" id="wanbackup_usb3gpassword" value="get_wanbackup_usb3gpassword()">
+		<label>LABEL_WANBACKUP_USB3GPASSWORD</label>
+	 </field>
+
+	 <field type="text" id="wanbackup_usb3ginitscript" value="get_wanbackup_usb3ginitscript()">
+		<label>LABEL_WANBACKUP_USB3GINITSCRIPT</label>
+	 </field>
+        --> 
+	<field type="select" id="bwlimit_configmethod" options="'now' => 'Apply Immediately', 'later' => 'Check each 5min (expert only)'" value="get_bwlimit_configmethod()">
+		<label>BWLIMIT_CONFIGMETHOD</label>
+	</field>
+	
+	<field type="text" id="bwlimit_CalcBandwidthURL" value="get_bwlimit_CalcBandwidthURL()">
+		<description>BWCALC_DESCRIPTION</description>
+		<label>BWLIMIT_BWCALCURL</label>
+	</field>
+
+	<field type="text" id="bwlimit_CalcBandwidthWaitTime" value="get_bwlimit_CalcBandwidthWaitTime()">
+		<label>BWLIMIT_BWCALCWAIT</label>
+	</field>
+
+	<field type="text" id="bwlimit_CalcBandwidthCountTime" value="get_bwlimit_CalcBandwidthCountTime()">
+		<label>BWLIMIT_BWCALCCOUNTTIME</label>
+	</field>
+	
+	<field type="select" id="bwlimit_CachePrimer" options="'yes' => 'Yes', 'no' => 'No'" value="get_bwlimit_CachePrimer()">
+		<label>BWLIMIT_CACHEPRIMER</label>
+		<description>CACHEPRIME_DESCRIPTION</description>
+	</field>
+
+	<field type="select" id="bwlimit_CachePrimerStartTime" options="get_bwlimit_CachePrimerStartTime_options()" value="get_bwlimit_CachePrimerStartTime()">
+		<label>BWLIMIT_CACHEPRIMERSTARTTIME</label>
+	</field>
+
+	<field type="select" id="bwlimit_CachePrimerRunTime" value="get_bwlimit_CachePrimerRunTime()" 
+		options="'3600' => '1hr', '7200' => '2hrs', '10800' => '3hrs', '14400' => '4hrs', '18000' => '5hrs', '21600' => '6hrs'">
+		<label>BWLIMIT_CACHEPRIMERRUNTIME</label>
+	</field>
+
+	<field type="text" id="bwlimit_CachePrimerSpeedLimit" value="get_bwlimit_CachePrimerSpeedLimit()">
+		<label>BWLIMIT_CACHEPRIMERSPEEDLIMIT</label>
+	</field>
+
+	<field type="select" id="bwlimit_autoresetgroup" options="get_group_list()" value="get_bwlimit_autoresetgroup()">
+		<description>BWLIMIT_AUTORESETDESC</description>
+		<label>BWLIMIT_AUTORESETGROUP</label>
+	</field>
+
+         <subroutine src="print_button('SAVE')" />
+     </page>
+
+ </form>
+
+

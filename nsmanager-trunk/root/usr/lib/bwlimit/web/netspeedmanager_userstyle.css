@@ -1,0 +1,231 @@
+/* 
+    Document   : netspeedmanager_userstyle
+    Created on : Jan 17, 2010, 7:16:49 PM
+    Author     : mike
+    Description:
+        Purpose of the stylesheet follows.
+*/
+
+/* 
+   TODO customize this sample style
+   Syntax recommendation http://www.w3.org/TR/REC-CSS2/
+*/
+
+root { 
+    display: block;
+}
+
+BODY {
+    background-color: lightgray;
+    margin: 0px;
+    
+}
+
+BODY, TD {
+    font: 10pt arial, sans-serif;
+}
+
+#maincontainer {
+    background-color: white;
+    border: 1px solid gray;
+    margin: 3px;
+    padding: 5px;
+}
+
+#toolbox_container {
+    width: 140px;
+}
+
+#graph_container{
+    background-color: #FFF;
+}
+
+
+.toolbar_usagebox {
+    border: 1px solid black;
+    display: block;
+    width: 120px;
+    height: 24px;
+}
+
+.toolbox_periodlabel {
+    font: bold 10pt arial, sans-serif;
+}
+
+.toolbox_quotalabel {
+    font: bold 8pt arial, sans-serif;
+}
+
+.usernamelabel {
+    font: 10pt arial, sans-serif;
+}
+
+.copyright_notice {
+    
+    font: 8pt arial, sans-serif;
+}
+
+.tools_header {
+    background-color: gray;
+    color: white;
+    padding: 3px;
+    font: bold 12pt arial, sans-serif;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.tool_button_link, .tool_button_link:visited {
+    width: 120px;
+    background-color: gray;
+    color: white;
+    border: 1px solid gray;
+    font: bold 10pt arial, sans-serif;
+    margin-bottom: 6px;
+    display: block;
+    padding: 2px;
+    text-decoration: none;
+}
+
+.tool_button_link:hover {
+    background-color: #ff3300;
+
+}
+
+.smallheader {
+    color: #333333;
+    font: bold 12pt arial, sans-serif;
+}
+
+.nsmheadercell {
+    color: #333333;
+    font: bold 14pt arial, sans-serif;
+    padding: 4px;
+}
+
+.nsminputbox {
+    border: 1px solid gray;
+}
+
+.nsmbutton {
+    color: white;
+    background-color: #aaaaaa;
+    border: 1px solid gray;
+    font-weight: bold;
+}
+
+.nsmbutton:hover {
+    background-color: orange;
+}
+
+.report_table{
+    border: 1px solid black;
+    background-color: gray;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.report_table th{
+    background-color: #333333;
+}
+
+.report_table_total td{
+    background-color: #333333;
+    color: white;
+    border-top: 1px solid black;
+}
+
+.report_table_active_tab{
+    background-color: gray;
+}
+
+.report_table_tab{
+    background-color: #CCC;
+}
+
+.bytes{
+    background-color: #D8D8D8;
+}
+
+.saved{
+    background-color: #A4A4A4;
+}
+
+#guest_table TR TD {
+    padding: 3px;
+}
+
+.nsm_headercell {
+    background-color: #ff0000;
+    font: bold 10pt arial, sans-serif;
+    color: white;
+    padding: 5px;
+}
+
+.nsmerror {
+    border: 1px outset red;
+    background-color: #ff2222;
+    padding: 4px;
+    color: white;
+    
+}
+
+.status_ok, .status_problem {
+    font: bold 16pt arial, sans-serif;
+    color: white;
+    padding: 10px;
+    text-align: center;
+}
+
+.status_ok {
+    background-color: green;
+}
+
+.status_problem {
+    background-color: red;
+}
+
+.testheader {
+    font: bold 12pt arial, sans-serif;
+    background-color: #333333;
+    color: white;
+    padding: 4px;
+    width: 250px;
+}
+
+.headercell, .headercell TR TD {
+    background-color: #333333;
+    color: white;
+    font: bold 12pt arial, sans-serif;
+    padding: 6px;
+}
+
+.nsmusertable1 {
+    border-collapse: collapse;
+
+}
+
+.nsmusertable1 TD {
+    border: 1px solid #333333;
+    padding: 4px;
+    font: 11pt arial, sans-serif;
+}
+
+.ticketsmall {
+    font: 8pt arial, sans-serif;
+}
+
+.passtable TD, .passtable {
+    border:  1px solid black;
+    border-collapse: collapse;   
+}
+
+TD.passusercell {
+    width: 200px;
+    padding: 15px;
+}
+
+td.passmessagecell {
+    width: 700px;
+    padding: 15px;
+}
+

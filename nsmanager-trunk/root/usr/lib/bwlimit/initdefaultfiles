@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Init default block lists and html templates
+#
+# Do not override user stuff if already here
+
+LISTDIR=/usr/lib/bwlimit/customlists/
+DEFAULTLISTS=$(ls $LISTDIR/*.default)
+
+for currentlist in $DEFAULTLISTS; do
+	BASENAME=$(basename $currentlist .default)
+	
+	if [ ! -e $LISTDIR/$BASENAME ]; then
+		cp $currentlist $LISTDIR/$BASENAME
+	fi
+done
+
+HTMLDIR=/usr/lib/bwlimit/web
+DEFAULTHTMLLIST=$(ls $HTMLDIR/*.html.default)
+
+for currenthtml in $DEFAULTHTMLLIST; do
+	BASENAME=$(basename $currenthtml .default)
+	if [ ! -e $HTMLDIR/$BASENAME ]; then
+		cp $currenthtml $HTMLDIR/$BASENAME
+	fi
+done
+

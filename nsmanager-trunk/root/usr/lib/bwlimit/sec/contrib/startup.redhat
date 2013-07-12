@@ -1,0 +1,104 @@
+Sample SEC startup files for RedHat (contributed by Mark Bergman)
+
+
+--------------------- /etc/init.d/sec --------------------------------
+#!/bin/bash
+#
+# chkconfig: 2345 26 74
+# description: Simple Event Correlator script to filter log file entries
+# config: /etc/sysconfig/sec
+#
+CONFIG=/etc/sysconfig/sec
+SEC=/usr/local/bin/sec.pl
+
+# Source function library.
+. /etc/init.d/functions
+
+RETVAL=0
+
+start() {
+        echo -n "Starting up Syslog Event Correlator: "
+        while read command
+        do
+                command=`echo $command | sed -e "s/\#.*//" -e "s/^  *//" -e 's/  *$//' -e '/^$/d'`
+                if [ ! -z "$command" ] ; then
+                        daemon $SEC $command
+                        RETVAL=$(( $? + RETVAL ))
+                fi
+        done < $CONFIG
+
+        if [ $RETVAL -eq 0 ] && touch /var/lock/subsys/sensors ; then
+                echo_success
+                echo
+        else
+                echo_failure
+                echo
+        fi
+}
+
+stop() {
+        echo -n $"Shutting down sec.pl: "
+        killproc sec.pl
+        RETVAL=$?
+
+        if [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/sensors ; then
+                echo_success
+                echo
+        else
+                echo_failure
+                echo
+        fi
+}
+
+dostatus() {
+        $PSENSORS
+        RETVAL=$?
+}
+
+restart() {
+        stop
+        start
+        RETVAL=$?
+}
+
+condrestart() {
+        [ -e /var/lock/subsys/sensors ] && restart || :
+}
+
+# See how we were called.
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        dostatus
+        ;;
+  restart|reload)
+        restart
+        ;;
+  condrestart)
+        condrestart
+        ;;
+  *)
+        echo "Usage: sec {start|stop|status|restart|reload|condrestart}"
+        exit 1
+esac
+
+exit $RETVAL
+
+----------------------------------------------------------------------
+
+
+--------------------- /etc/sysconfig/sec -----------------------------
+# config file for the Simple Event Correlator
+# See: http://kodu.neti.ee/~risto/sec/
+#
+# This config file has complete command lines--except for the sec.pl executable
+#
+# Config to monitor local1
+-detach -conf=/usr/local/etc/sec/local1.sec -input=/var/log/local1 -log=/var/log/sec.log
+----------------------------------------------------------------------
+

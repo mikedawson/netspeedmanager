@@ -1,0 +1,12 @@
+{
+    my $rec = $DB->get('BWLimit')
+        || $DB->new_record('BWLimit', {type => 'service'});
+
+    my $password = $rec->prop('DbPassword');
+    return "" if $password;
+
+    use MIME::Base64;
+
+    $rec->set_prop('DbPassword', sprintf("%15.0f", int( (1000000000000000) * rand() )));
+}
+

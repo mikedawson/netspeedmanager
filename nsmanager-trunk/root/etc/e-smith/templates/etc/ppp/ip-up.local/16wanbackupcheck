@@ -1,0 +1,9 @@
+
+TTYDEVICE=$2
+NEWINTERFACE=$1
+
+if [ "$TTYDEVICE" == "/dev/ttyUSB2" ]; then
+	IPPARAM=usb3g
+fi
+
+

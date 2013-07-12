@@ -1,0 +1,20 @@
+{
+    #Make a proxy authentication setup if this is the type of setup that we are
+    #using
+
+    if ($BWLimitSetupType eq "ProxyAuth") {
+        $OUT .= "auth_param basic program /usr/lib/squid/pam_auth\n"
+                . "auth_param basic children 5\n"
+                . "auth_param basic credentialsttl 2 hours\n"
+    }elsif ($BWLimitSetupType eq "ByIP") {
+        $OUT .= "external_acl_type bwlimit_byip negative_ttl=30 ttl=30 \%SRC /usr/lib/bwlimit/bwlimit-extacl.pl\n";
+    }
+}
+
+
+
+
+
+
+
+

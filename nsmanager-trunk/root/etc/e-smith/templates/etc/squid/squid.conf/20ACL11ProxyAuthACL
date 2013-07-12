@@ -1,0 +1,27 @@
+
+{
+
+
+    use esmith::bwlimit::bwlimit_utils;
+    use esmith::FormMagick;
+    use esmith::AccountsDB;
+    use esmith::ConfigDB;
+
+    my $db = esmith::ConfigDB->open();
+    my $adb = esmith::AccountsDB->open();
+
+    my $bwlimit_setup_type_rec = $db->get("BWLimitSetupType");
+    if($bwlimit_setup_type_rec) {
+        my $bwlimit_setup_type = $bwlimit_setup_type_rec->prop("type");
+        if($bwlimit_setup_type =~ "ProxyAuth") {
+            $OUT .= "acl authenticated proxy_auth REQUIRED\n";
+        }elsif ($bwlimit_setup_type =~ "ByIP") {
+	    #negative_ttl is important - we cannot cache the negative lookup because otherwise after login the username will not be known to squid...
+            $OUT .= "external_acl_type bwlimit_byip negative_ttl=30 ttl=30 \%SRC /usr/lib/bwlimit/bwlimit-extacl.pl\n";
+        }
+    }
+
+    $OUT .= "acl localmachine src 127.0.0.1\n";
+}
+
+acl localnetwork src { $LocalIP }/{ $LocalNetmask }

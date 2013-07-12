@@ -1,0 +1,16 @@
+{
+    #If we are using BWLimit ByIP system then we need to drop any traffic
+    #that comes from a non-activated local address
+
+
+    #then use netspeedmanager_ipcontrol to activate a given local client
+
+    if ( $BWLimitSetupType ) {
+        if ( "$BWLimitSetupType" eq "ByIP" ) {
+            $OUT .= "   /sbin/iptables -t nat --insert PostroutingOutbound 1 -s $ExternalIP -j ACCEPT\n";
+            $OUT .= "   /sbin/iptables -t nat --insert PostroutingOutbound 2 -s $LocalIP -j MASQUERADE\n";
+            $OUT .= "   /sbin/iptables -t nat --insert PostroutingOutbound 3 -j DROP\n";
+        }
+   }
+
+}

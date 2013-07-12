@@ -1,0 +1,178 @@
+{
+    #
+    #   Net Speed Manager User and ACL Generator for Squid Guard
+    #
+    #   Because squidGuard will simply match the first applicable rule
+    #   we must compute for each user and each time range which ACLs to block
+    #
+    #   First create a list of src statements that simply match to the users
+    #   on this SME Server system.  Then for each user go through the groups
+    #   that user is in and for each timerange see if a sitelist is to be blocked
+    #   or not
+    #
+
+    use esmith::bwlimit::bwlimit_utils;
+    use esmith::FormMagick;
+    use esmith::AccountsDB;
+    use esmith::ConfigDB;
+
+    my $db = esmith::ConfigDB->open();
+    my $adb = esmith::AccountsDB->open();
+
+    my $bwacl_list_record = $db->get('BWLimitACLs');
+    my @acl_list = split(/,/, $bwacl_list_record->value);
+
+    my $bwlimit_setup_type_rec = $db->get("BWLimitSetupType");
+
+    if($bwlimit_setup_type_rec) {
+        my $user_acl_type = "proxy_auth";
+        my $bwlimit_setup_type = $bwlimit_setup_type_rec->prop("type");
+        if($bwlimit_setup_type eq "ByIP") {
+            $user_acl_type = "external bwlimit_byip";
+        }
+
+        for my $current_user ($adb->users) {
+            my $current_username = $current_user->key;
+            #$OUT .= "acl useracl_$current_username $user_acl_type $current_username \n";
+		$OUT .= "src user_$current_username {\n";
+		$OUT .= "user \t $current_username\n";
+		$OUT .= "}\n";
+	}
+    }
+
+    $OUT .= "acl {\n";
+    for my $current_user ($adb->users) {
+        my $current_username = $current_user->key;
+        my %{usertimelist};
+        my $bwtimeprops = $db->get("BWLimitTimes");
+
+	if($bwtimeprops) {
+            for my $bwtimeprop ($bwtimeprops->props) {
+                if($bwtimeprop =~ m/^timerange_time_(.*)$/) {
+                    my $timerange_name = $bwtimeprop;
+                    $timerange_name =~ m/^timerange_time_(.*)/;
+                    $timerange_name = $1;
+
+                    for my $acl_list_name (@acl_list) {
+                        $usertimelist{$timerange_name}{$acl_list_name} = "-";
+                    }
+                    
+                }
+            }
+        }
+
+        #find the bw group that controls this group
+	my $bwgroup_name = $current_user->prop("BWLimitCountGroup") || "";
+        
+
+        if($bwgroup_name ne "unsorted" && $bwgroup_name ne "") {
+	    my $group_name = $bwgroup_name;
+            my $group_rec = $adb->get($group_name);
+            my $group_allow_list = $group_rec->prop("BWLimitACLAllow") || "";
+            my $group_deny_list = $group_rec->prop("BWLimitACLDeny") || "";
+            # $OUT .= "# GROUP DENY LIST for $group_name = $group_deny_list \n";
+            my @group_allow_acl_list = split(/,/, $group_allow_list);
+            my @group_deny_acl_list = split(/,/, $group_deny_list);
+
+            for $allow_entry (@group_allow_acl_list) {
+                my @grp_allow_entry_parts = split(/:/, $allow_entry);
+                my $grp_timerange_name = $grp_allow_entry_parts[0];
+                my $grp_timerange_acl_name = $grp_allow_entry_parts[1];
+                $usertimelist{$grp_timerange_name}{$grp_timerange_acl_name} = "ALLOW";
+            }
+
+            for $deny_entry (@group_deny_acl_list) {
+                my @grp_deny_entry_parts = split(/:/, $deny_entry);
+                my $dgrp_timerange_name = $grp_deny_entry_parts[0];
+                my $dgrp_timerange_acl_name = $grp_deny_entry_parts[1];
+                $usertimelist{$dgrp_timerange_name}{$dgrp_timerange_acl_name} = "DENY";
+            }
+        }
+
+        #TODO: Go through users own ACL combos
+        my $user_rec = $adb->get($current_username);
+        my $user_allow_list = $user_rec->prop("BWLimitACLAllow") || "";
+        my $user_deny_list = $user_rec->prop("BWLimitACLDeny") || "";
+        
+        my @user_allow_acl_list = split(/,/, $user_allow_list);
+        my @user_deny_acl_list = split(/,/, $user_deny_list);
+
+        for $allow_entry (@user_allow_acl_list) {
+            my @allow_entry_parts = split(/:/, $allow_entry);
+            my $timerange_name = $allow_entry_parts[0];
+            my $timerange_acl_name = $allow_entry_parts[1];
+            $usertimelist{$timerange_name}{$timerange_acl_name} = "ALLOW";
+            # $OUT .= "# $current_username - $timerange_name - $timerange_acl_name - ALLOW \n";
+        }
+
+        for $deny_entry (@user_deny_acl_list) {
+            my @deny_entry_parts = split(/:/, $deny_entry);
+            my $dtimerange_name = $deny_entry_parts[0];
+            my $dtimerange_acl_name = $deny_entry_parts[1];
+            $usertimelist{$dtimerange_name}{$dtimerange_acl_name} = "DENY";
+            # $OUT .= "# $current_username - $timerange_name - $timerange_acl_name - DENY \n";
+        }
+
+
+
+        my $bwtimeprops2 = $db->get("BWLimitTimes");
+
+
+        for my $bwtimeprop ($bwtimeprops2->props) {
+            if($bwtimeprop =~ m/^timerange_time_(.*)$/) {
+                my $bwtimerange_name = $bwtimeprop;
+                $bwtimerange_name =~ m/^timerange_time_(.*)/;
+                $bwtimerange_name = $1;
+                if($bwtimerange_name =~ m/^always$/) {
+                    next;
+                }
+                $OUT .= "user_$current_username within $bwtimerange_name { \n";
+                $OUT .= "\t pass ";
+                #$OUT .= "# user acl helper: ";
+
+                for $aclname (@acl_list) {
+                    $this_acl_val = $usertimelist{$bwtimerange_name}{$aclname} || "";
+                    # $OUT .= "\n#This acl val $bwtimerange_name $aclname $current_username $this_acl_val";
+                    if($this_acl_val =~ m/^DENY$/) {
+                        if($aclname =~ m/^squidguard_(.*)$/) {
+                            my $actual_aclname = $aclname;
+                            $actual_aclname =~ m/^squidguard_(.*)$/;
+                            $actual_aclname = $1;
+                            $OUT .= "!" . $actual_aclname . " ";
+                        }
+                    }
+                }
+                
+                $OUT .= " all \n}\n\n";
+                
+            }
+        }
+
+
+        #
+        # Always put the timerange always as the last one to be matched
+        #
+        $timerange_name = "always";
+        $OUT .= "user_$current_username within $timerange_name { \n";
+        $OUT .= "\t pass ";
+        #$OUT .= "# user acl helper: ";
+
+        for $aclname (@acl_list) {
+            $this_acl_val = $usertimelist{$timerange_name}{$aclname} || "";
+            # $OUT .= "\n#This acl val $timerange_name $aclname $current_username $this_acl_val";
+            if($this_acl_val =~ m/^DENY$/) {
+                if($aclname =~ m/^squidguard_(.*)$/) {
+                    my $actual_aclname = $aclname;
+                    $actual_aclname =~ m/^squidguard_(.*)$/;
+                    $actual_aclname = $1;
+                    $OUT .= "!" . $actual_aclname . " ";
+                }
+            }
+        }
+
+        $OUT .= " all \n}\n\n";
+
+    }
+
+    $OUT .= "\n default { \npass none\n}\n \n}\n";
+}

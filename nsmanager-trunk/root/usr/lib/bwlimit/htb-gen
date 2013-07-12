@@ -1,0 +1,363 @@
+#!/bin/bash
+# set -x
+#       Program: htb-gen
+#       Version: 0.8.4
+#   Description: Script to automate multi host bandwidth managment
+#           URL: http://www.freshmeat.net/projects/htb-gen/ 
+#        Author: Luciano Ruete <luciano _at_ praga.org.ar>
+#       License: GPLv2+
+#
+# This file is part of htb-gen, and is subject to the license terms in the
+# LICENSE file, found in the top level directory of this distribution.
+# If you did not receive the LICENSE file with this file, you may obtain it
+# from the htb-gen source package distributed by the htb-gen Project at
+# http://www.praga.org.ar/wacko/DevPraga/htbgen/LICENSE.
+# No part of Htb-gen, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms described in the
+# LICENSE file.
+# 
+#Script begins --here!-- don't touch bellow this line... but, if you do, mail me! :-)
+source "/etc/htb-gen/htb-gen.conf"
+down_rate=$3  
+down_ceil=$4
+up_rate=$5 
+up_ceil=$6
+htbcustomparent=$7
+command=$1
+
+#catch / limit squid traffic
+SQUIDPORT=$(/sbin/e-smith/db configuration getprop squid TCPPort)
+BWLIMIT_CLIENT_IDS=/var/current_BWL_clients
+
+
+#test -r $htb_gen_rates_conf || { echo "rates config file not found: $htb_gen_rates_conf" && exit 1; }
+
+#easy path adaptation
+function iptables () { ${iptables_command:="/sbin/iptables"} "$@"; }
+function iptables-save () { ${iptables_save_command:="/sbin/iptables-save"} "$@"; }
+function iptables-restore () { ${iptables_restore_command:="/sbin/iptables-restore"} "$@"; }
+function tc () { ${tc_command:="/sbin/tc"} "$@"; }
+
+function load_conf () { #loads htb-gen-rates.conf in global vars for furter use
+	local n=0  line= total_ceil_down=0 total_ceil_up=0 _total_rate_down=$total_rate_down _total_rate_up=$total_rate_up 
+	#test to see if ann classes are active now
+	test -z "$(tc  filter show dev ${iface_up})" && test -z "$(tc  filter show dev ${iface_down})"
+	if [ $? -ne 0 ] 
+	then
+		#if yes - find the class starting point
+		class_start=`ls /var/current_BWL_clients/|cut -f2 -d-|sort -n|tail -1`
+		(( class_start=class_start+6 ))
+		echo $class_start
+	else
+		#if no delete all existing dir (e.g. has been restarted)
+		rm -rf /var/current_BWL_clients
+	fi
+
+
+#check and see if this client is already configured
+if [ -d $BWLIMIT_CLIENT_IDS ]; then
+	ls $BWLIMIT_CLIENT_IDS|cut -f1 -d-|while read x
+        	do
+	        if [ "$x" = "$1" ]
+        	then
+                	 echo "ip already configured"
+                 	kill -9 $$
+         	fi
+	done
+fi
+
+#while read line ;do 
+	#read -a & ${line[x]} is another way, but this is eye cleanner :-)
+	#set -- $line 
+	#test -z "${1##\#*}" && continue # skip commented lines
+	#test -z "$5" && continue # skip blank/bad writen lines
+	#client_ip rate_down    ceil_down     rate_up     ceil_up #conf file format
+	ip[n]=$1; rate_down[n]=$2; ceil_down[n]=$3; rate_up[n]=$4; ceil_up[n]=$5; customparent[n]=$6
+	# consecutive class/mark value assignation, begining from class_start
+        if ! [ -e /var/current_BWL_clients ]
+        then
+		mkdir /var/current_BWL_clients
+	fi
+	touch /var/current_BWL_clients/${ip[n]}-${class_start}
+	class_down[n]=$((class_start++)) 
+	class_prio_down[n]=$((class_start++))
+	class_dfl_down[n]=$((class_start++))
+	class_up[n]=$((class_start++))
+	class_prio_up[n]=$((class_start++))
+	class_dfl_up[n]=$((class_start++))
+	let _total_rate_down-=${rate_down[n]}; let _total_rate_up-=${rate_up[n]} #calc remaining rate
+	#give/grant $rate_granted kbits per "0 rate" class, stolen from total_rate
+	test ${rate_down[n]} == 0 && let _total_rate_down-=rate_granted && let total_ceil_down+=${ceil_down[n]} 
+	test ${rate_up[n]} == 0 && let _total_rate_up-=rate_granted && let total_ceil_up+=${ceil_up[n]} 
+	# some safe tests, boring, but newbie's trap
+	#test $_total_rate_down -ge 0 || { echo "check rates conf, not enough download bandwidth" && exit 1; }
+	#test $_total_rate_up -ge 0 || { echo "check rates conf, not enough upload bandwidth" && exit 1; }
+	#test $total_rate_down -ge ${ceil_down[n]} || { echo "check rates conf, per host ceil can't be bigger than total_rate" && exit 1; }
+	#test $total_rate_up -ge ${ceil_up[n]} || { echo "check rates conf, per host ceil can't be bigger than total_rate" && exit 1; }
+	#let n++ 
+#done <<EOF
+#$(< $htb_gen_rates_conf) 
+#EOF
+#for ((n=0;n<${#ip[@]};n++)); do
+	# fair ceil_to_rate percent assignation (+rate_granted, more impact in small classes)
+	test ${rate_down[n]} == 0 && rate_down[n]=$((${ceil_down[n]}*_total_rate_down/total_ceil_down+rate_granted)) 
+	test ${rate_up[n]} == 0 && rate_up[n]=$((${ceil_up[n]}*_total_rate_up/total_ceil_up+rate_granted)) 
+#done
+}
+
+function do_htbinit() { # 9args... this is a record!
+# ip=${2/\//_}: replace '/' by '_' for file naming in network notation
+local mode=$1 ip=${2/\//_} rate=$3 ceil=$4 burst=$5 class=$6 parent=$7 iface=$8 prio=$9 
+local ext=""
+case "$mode" in
+
+root)	test -r $htb_dir || { echo "htb-init directory does not exists: $htb_dir" && exit 1; }
+	if [[ do_full_conf -eq 0 ]]; then
+		rm -f "${htb_dir}/${iface_down}-${class_parent_down}"* \
+	      	      "${htb_dir}/${iface_up}-${class_parent_up}"* 2>/dev/null
+	else 
+		rm -f "${htb_dir}/"* 2>/dev/null
+		echo "R2Q=$r2q" > "${htb_dir}/${iface_down}" 
+		echo "R2Q=$r2q" > "${htb_dir}/${iface_up}" 
+	fi
+	;;
+parent)	cat >"${htb_dir}/${iface}-${parent}${parent:+:}${class}.${ip}" <<-EOF 	  
+		RATE=${rate}kbit
+		CEIL=${ceil}kbit
+		BURST=${burst}k 
+		EOF
+	;;
+leaf)	if [[ $prio -eq 1 ]] ; then ext="prio"; else ext="dfl"; fi
+	cat >"${htb_dir}/${iface}-${parent}:${class}.${ip}.${ext}" <<-EOF 	  
+		RATE=${rate}kbit
+		CEIL=${ceil}kbit
+		BURST=${burst}k 
+		PRIO=$prio
+		LEAF=sfq
+		MARK=$class
+		EOF
+	;;
+esac
+}
+
+function do_tc () { 
+local mode=$1 ip=${2/\//_} rate=$3 ceil=$4 burst=$5 class=$6 parent=${7##*:} iface=$8 prio=$9 
+echo mode=$mode
+local quantum=$((rate*1024/8/r2q<mtu?mtu:rate*1024/8/r2q))
+case "$mode" in 
+root)	if [[ do_full_conf -eq 1 ]]; then
+		tc qdisc del dev $iface root
+		tc qdisc add dev $iface root handle 1 htb default 0 r2q $r2q
+	fi #TODO else (can i del an arbitrary class?)
+	;;
+parent) tc class add dev $iface parent 1:${parent} classid 1:${class} htb rate ${rate}kbit ceil ${ceil}kbit burst ${burst}k quantum $quantum
+	echo "added parent 1:${class}"
+	echo tc class add dev $iface parent 1:${parent} classid 1:${class} htb rate ${rate}kbit ceil ${ceil}kbit burst ${burst}k quantum $quantum
+	;;
+leaf)	tc class add dev $iface  parent 1:${parent} classid 1:${class} htb rate ${rate}kbit ceil ${ceil}kbit burst ${burst}k prio $prio quantum $quantum
+	tc qdisc add dev $iface parent 1:${class} handle ${class} sfq perturb 10
+	tc filter add dev $iface parent 1:0 protocol ip prio 200 handle ${class} fw classid 1:${class}
+	;;
+esac
+}
+
+function do_conf () {
+	function _do_conf () {
+	case "$1" in 
+	tc)	shift && do_tc "$@"
+		;;
+	htbinit)shift && do_htbinit "$@"
+		;;
+	esac
+	}
+local backend=$1;c_parent_d=$class_parent_down;c_parent_u=$class_parent_up;rdp=$rate_dfl_percent;cdp=$ceil_dfl_percent
+test -z "$(tc  filter show dev ${iface_up})" && test -z "$(tc  filter show dev ${iface_down})"
+if [ $? -eq 0 ] 
+then
+_do_conf $backend "root"    false         false             false          false $c_parent_d false $iface_down  false
+_do_conf $backend "root"    false         false             false          false $c_parent_u false $iface_up    false
+_do_conf $backend "parent" "clients_down" $total_rate_down  $total_rate_down  12 $c_parent_d ""    $iface_down false
+_do_conf $backend "parent" "clients_up"   $total_rate_up    $total_rate_up    12 $c_parent_u ""    $iface_up   false
+
+#source in the groups generated by the template system.  This will create a
+#htb parent class for any group which is marked to be one
+source /etc/htb-gen/htb-gen-groups
+fi
+
+#for ((n=0;n<${#ip[@]};n++)); do
+	# WARNING: you will need a widescreen monitor to read/understand this... ;-)
+	# although do some alias for readability (my widescreen monitor is not that wide! :-/
+	local c_prio_d=${class_prio_down[n]};c_prio_u=${class_prio_up[n]};c_dfl_d=${class_dfl_down[n]};c_dfl_u=${class_dfl_up[n]}
+	local _ip=${ip[n]};r_d=${rate_down[n]};r_u=${rate_up[n]};c_d=${ceil_down[n]};c_u=${ceil_up[n]};_customparent=${customparent[n]}
+	
+	local _customparent_down=$_customparent
+        local _customparent_up=$(( $_customparent + 1 ))
+
+        if [ "$_customparent_down" == "0" ]; then
+		_customparent_down=$c_parent_d
+		_customaprent_up=$c_parent_u
+	fi
+	
+	
+
+	#params: type               ip  rate                       ceil          burst class             class_parent            iface       prio 
+	_do_conf $backend "parent" $_ip $r_d                       $c_d             24 ${class_down[n]}  $_customparent_down     $iface_down false
+	_do_conf $backend "leaf"   $_ip $((r_d*(100-rdp)/100))     $c_d             24 $c_prio_d    $c_parent_d:${class_down[n]} $iface_down     1
+	_do_conf $backend "leaf"   $_ip $((r_d-r_d*(100-rdp)/100)) $((c_d*cdp/100)) 12 $c_dfl_d     $c_parent_d:${class_down[n]} $iface_down     3
+	_do_conf $backend "parent" $_ip $r_u                       $c_u             24 ${class_up[n]}    $_customparent_up       $iface_up   false
+	_do_conf $backend "leaf"   $_ip $((r_u*(100-rdp)/100))     $c_u             24 $c_prio_u    $c_parent_u:${class_up[n]}   $iface_up       1
+	_do_conf $backend "leaf"   $_ip $((r_u-r_u*(100-rdp)/100)) $((c_u*cdp/100)) 12 $c_dfl_u     $c_parent_u:${class_up[n]}   $iface_up       3
+#done
+}
+
+function do_iptables() {
+	function _do_iptables () {
+		function __do_iptables () {
+		local dir=$1 ip=$2 class_prio=$3 class_dfl=$4 host_dir= ports_dir=
+		case "$dir" in down) host_dir=d;ports_dir=s ;; up) host_dir=s;ports_dir=d ;;esac	
+		# iptables accept either "." & "/" chars in table naiming, is my lucky day :-) !
+		iptables -t mangle -N htb-gen.${dir}-${ip} 
+		iptables -t mangle -A htb-gen.${dir} -${host_dir} ${ip} -j htb-gen.${dir}-${ip}
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -m length --length 0:100 -j MARK --set-mark ${class_prio} 
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p udp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p icmp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p tcp -m multiport --${ports_dir}ports $prio_ports -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -m helper --helper ftp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -j MARK --set-mark ${class_dfl} 
+		iptables -t mangle -A htb-gen.${dir}-${ip} -j ACCEPT 
+	    }
+test -z "$(tc  filter show dev ${iface_up})" && test -z "$(tc  filter show dev ${iface_down})"
+if [ $? -eq 0 ]
+then
+	# Make extra tables, cleaner & target match faster
+	iptables -t mangle -N htb-gen.down 
+	iptables -t mangle -A FORWARD -o ${iface_down} -j htb-gen.down
+	iptables -t mangle -N htb-gen.up 
+	iptables -t mangle -A FORWARD -o ${iface_up} -j htb-gen.up
+ 	#catch squid traffic
+	iptables -t mangle -A OUTPUT --proto tcp --sport $SQUIDPORT -j htb-gen.down
+        iptables -t mangle -A INPUT --proto tcp --dport $SQUIDPORT -j htb-gen.up
+fi
+	
+	#for ((n=0;n<${#ip[@]};n++)); do
+		__do_iptables "down" ${ip[n]} ${class_prio_down[n]} ${class_dfl_down[n]}
+		__do_iptables "up"   ${ip[n]} ${class_prio_up[n]}   ${class_dfl_up[n]}
+	#done
+	}
+#function begins here
+if [[ "$1" == "stdout" ]] ;then
+	iptables () { echo iptables "$@"; }
+	_do_iptables
+else
+	#delete old htb-gen entries(chains)
+	test -z "$(tc  filter show dev ${iface_up})" && test -z "$(tc  filter show dev ${iface_down})"
+	if [ $? -eq 0 ]
+	then
+		iptables -t mangle -D FORWARD -o ${iface_down} -j htb-gen.down 2>/dev/null
+		iptables -t mangle -D FORWARD -o ${iface_up} -j htb-gen.up 2>/dev/null
+	
+		while read line ;do
+			test -z "${line##:htb-gen*}" || continue # filter htb-gen chains only
+			chain=(${line/:/})
+                        echo $chain
+			iptables -t mangle -F $chain
+			iptables -t mangle -X $chain
+		done <<-EOF
+		$(iptables-save)
+		EOF
+        fi
+	#hack to echo an iptables-restore file, but i can steel write 
+	#normal/readable iptables rules
+	iptables () {
+	case "$3" in 
+	-A)   	shift 2
+			echo "$@" 
+				;;
+	-N)   	echo ":${4} - [0:0]" 
+				;;
+	esac
+	}
+	iptables-restore -n <<-EOF 
+	*mangle
+	$(_do_iptables)
+	COMMIT
+	EOF
+fi
+}
+function clear_ip () {
+
+	client_ip=$1
+     	client_start_id=`ls /var/current_BWL_clients/${1}*|cut -f2 -d'-'`
+	tc  filter show dev $iface_down|while read line
+					do
+						echo $line|grep $((client_start_id+1))||echo $line|grep $((client_start_id+2))
+						if [ $? -eq 0 ]
+						then
+							handle=`echo $line|cut -f 10 -d' '`
+							tc filter del dev $iface_down parent 1: protocol ip pref 200  handle $handle fw
+						fi
+					done
+	tc  filter show dev $iface_up|while read line
+                                        do
+                                                echo $line|grep $((client_start_id+4))||echo $line|grep $((client_start_id+5))
+                                                if [ $? -eq 0 ]
+                                                then
+                                                        handle=`echo $line|cut -f 10 -d' '`
+                                                        tc filter del dev $iface_up parent 1: protocol ip pref 200  handle $handle fw
+                                                fi
+                                        done
+	tc class del dev $iface_down classid 1:$((client_start_id+1))
+	tc class del dev $iface_down classid 1:$((client_start_id+2))
+	tc class del dev $iface_down classid 1:$client_start_id
+	tc class del dev $iface_up classid 1:$((client_start_id+4))
+	tc class del dev $iface_up classid 1:$((client_start_id+5))
+	tc class del dev $iface_up classid 1:$((client_start_id+3))
+	rm -f /var/current_BWL_clients/${1}*
+	iptables -t mangle -F htb-gen.up-${1}
+	iptables -t mangle -D htb-gen.up --jump htb-gen.up-${1} --src ${1} 
+	iptables -t mangle -X htb-gen.up-${1}
+
+	iptables -t mangle -F htb-gen.down-${1}
+	iptables -t mangle -D htb-gen.down --jump htb-gen.down-${1} --dst ${1}
+	iptables -t mangle -X htb-gen.down-${1}
+}
+case "$command" in 
+tc_all|tc_only)
+	echo "custom parent = $htbcustomparent"
+	load_conf $2  $down_rate  $down_ceil  $up_rate  $up_ceil $htbcustomparent
+	test "$1" == "tc_all" && do_iptables 
+	do_conf "tc" 
+	;;
+htbinit_all|htbinit_only)	
+	load_conf $2  $down_rate  $down_ceil  $up_rate  $up_ceil
+	test "$1" == "htbinit_all" && do_iptables 
+	do_conf "htbinit"
+	;;
+iptables|iptables_only)
+	load_conf $2  $down_rate  $down_ceil  $up_rate  $up_ceil
+	do_iptables 
+	;;
+clear_all)
+	iptables -t mangle -F
+	iptables -t mangle -X 
+	tc qdisc del dev ${iface_down} root
+	tc qdisc del dev ${iface_up} root
+        rm -rf /var/current_BWL_clients
+	;;
+clear_client)
+	clear_ip $2	
+
+	;;
+        
+*)	cat <<-EOF
+	Usage: 
+	$0 tc_all ip  down_rate  down_ceil  up_rate  up_ceil	   #execs tc rules & firewall rules
+	$0 tc_only         #execs tc rules only (no firewall)
+	$0 htbinit_all	   #generates htb-init config files & load firewall rules
+	$0 htbinit_only    #generates htb-init config files only (no firewall)
+	$0 iptables        #execs firewall rules only (call it from your firewall script)
+	$0 clear_all       #clears all clients,clears iptables, deletes all qdiscs
+	$0 clear_client	ip #clears the client with the specified ip 
+	EOF
+	;;
+esac

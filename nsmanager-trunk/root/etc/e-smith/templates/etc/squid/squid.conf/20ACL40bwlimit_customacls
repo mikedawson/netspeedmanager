@@ -1,0 +1,26 @@
+{
+
+    #this will list all the time / user combos that are in the config database
+
+    #go through the list of users
+
+    use esmith::bwlimit::bwlimit_utils;
+    use esmith::FormMagick;
+    use esmith::ConfigDB;
+
+    my $db = esmith::ConfigDB->open();
+
+    my $bwlimit_acl_rec = $db->get("BWLimitACLs");
+    my $bwlimit_acl_liststr = $bwlimit_acl_rec->prop("type");
+
+    my @acl_list = split(/,/, $bwlimit_acl_liststr);
+
+    for my $current_acl (@acl_list) {
+	if($current_acl =~ m/squid_custom/) {
+		my $aclname = $current_acl;
+		$aclname =~ s/squid_custom_//g;
+		$OUT .= "acl $current_acl dstdomain \"/usr/lib/bwlimit/customlists/$aclname\"\n";
+	}
+    }
+
+}

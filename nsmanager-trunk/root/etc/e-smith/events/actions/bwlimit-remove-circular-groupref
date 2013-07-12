@@ -1,0 +1,21 @@
+#!/usr/bin/perl -wT
+
+#
+# This will make sure there are no circular references in
+# the group parent hierachies (that could otherwise lead to an
+# infinite loop situation)
+#
+
+use strict;
+use warnings;
+
+
+use esmith::bwlimit::bwlimit_utils;
+use esmith::FormMagick;
+use esmith::AccountsDB;
+use esmith::ConfigDB;
+
+
+htbgroup_remove_circular_ref();
+
+

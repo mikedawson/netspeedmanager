@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#
+#Just here so we can call it afterwards...
+#
+/etc/init.d/masq restart
+

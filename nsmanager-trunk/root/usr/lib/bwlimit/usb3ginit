@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# DLINK DWL 156
+
+if [ ! -e /dev/ttyUSB2 ]; then
+	/usr/sbin/usb_modeswitch -I -c /etc/usb_modeswitch.d/07d1:a804
+	
+	USBSERIALLINE=$(/sbin/lsmod | grep usbserial)
+	if [ "$USBSERIALLINE" != "" ]; then
+		/sbin/rmmod usbserial
+	fi
+
+	/sbin/modprobe usbserial vendor=0x07d1 product=0x7e11
+	sleep 15
+fi
+
+
+ 

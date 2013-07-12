@@ -1,0 +1,864 @@
+<?php
+
+
+
+require_once "/usr/lib/bwlimit/bwlimit-config.php";
+
+/**
+ * The last time rate that was checked - unix time
+ */
+$last_time_rate_checked = -1;
+
+/**
+ * Array of the time ranges that are in operation
+ */
+$timeranges = null;
+
+/*
+ * (Cached) the 'rate' at which the bandwidth will be charged for the last
+ * time range
+ * 
+ */
+$last_time_rate = -1;
+
+/*
+ * The Local IP of the system so that we can count bandwidth external
+ */
+$local_ip = "";
+
+/*
+ * The Local Netmask of the system so that we can count bandwidth external
+ */
+$local_netmask = "";
+
+//This is either "ProxyAuth" or "ByIP"
+$running_mode = "";
+
+
+//Days of the week according to Squid
+$days_squidnames = array(
+        0 => 'S',
+        1 => 'M',
+        2 => 'T',
+        3 => 'W',
+        4 => 'H',
+        5 => 'F',
+        6 => 'A'
+    );
+
+
+$BWLIMIT_ALREADY_CONNECTED = 0;
+
+$BWLIMIT_OVERQUOTA_POLICY=`/sbin/e-smith/db configuration getprop BWLimit exceedpolicy`;
+
+function connectdb() {
+    global $BWLIMIT_DBHOST;
+    global $BWLIMIT_DBUSER;
+    global $BWLIMIT_DBPASS;
+    global $BWLIMIT_DBNAME;
+    global $BWLIMIT_ALREADY_CONNECTED;
+
+    if($BWLIMIT_ALREADY_CONNECTED == 0 || $BWLIMIT_ALREADY_CONNECTED == False) {
+        mysql_connect($BWLIMIT_DBHOST, $BWLIMIT_DBUSER, $BWLIMIT_DBPASS);
+        $BWLIMIT_ALREADY_CONNECTED = mysql_select_db($BWLIMIT_DBNAME);
+    }
+
+}
+
+
+/**
+ * This function will load the system default values for IP address,
+ * netmask, setup type etc.
+ */
+function init_load_sysvals() {
+    global $local_ip;
+    global $local_netmask;
+    global $running_mode;
+
+    $sql = "SELECT setup_type, local_ip, local_netmask from process_log";
+    $net_ip_result = mysql_query($sql);
+    $net_ip_assoc = mysql_fetch_assoc($net_ip_result);
+    $local_ip = $net_ip_assoc['local_ip'];
+    $local_netmask = $net_ip_assoc['local_netmask'];
+    $running_mode = $net_ip_assoc['setup_type'];
+}
+
+function load_time_ranges() {
+    global $timeranges;
+
+    $sql = "SELECT * FROM time_ranges";
+    $result = mysql_query($sql);
+    $row = null;
+
+    $timeranges = array();
+
+    while(($row = mysql_fetch_assoc($result)) != null) {
+        $timerange_time_name = $row['timerange_time_name'];
+        $timerange_timerange = $row['timerange_timerange'];
+        $timerange_rate = $row['timerange_rate'];
+
+        $timeranges[$timerange_time_name] = array();
+        $timeranges[$timerange_time_name]['range'] = $timerange_timerange;
+        $timeranges[$timerange_time_name]['rate'] = $timerange_rate;
+    }
+}
+
+
+/**
+ * This function will check and see if this username can create a guest
+ * account or not
+ *
+ * return true if they can, false otherwise.
+ *
+ * @param <type> $username
+ */
+function bwlimit_can_create_guest_account($username) {
+
+    $sql_check_user_stmt = "SELECT can_create_guest_acct FROM user_details WHERE "
+        . " username = '$username'";
+
+    $check_user_result = mysql_query($sql_check_user_stmt);
+    $check_user_arr = mysql_fetch_assoc($check_user_result);
+
+    if($check_user_arr['can_create_guest_acct'] == '1') {
+        return true;
+    }else {
+        return false;
+    }
+}
+
+
+/**
+ * This function should determine the 'rate' at which the bandwidth will be
+ * added.
+ *
+ * This is the highest rate that applies to the given time.
+ *
+ * @param <type> $time - unix time (seconds since epoch)
+ *
+ * You must connect to the database before call this function, and you must load
+ * the time ranges...
+ */
+function getrate($time) {
+    global $timeranges;
+    global $last_time_rate_checked;
+    global $last_time_rate;
+
+    if($timeranges == null) {
+        load_time_ranges();
+    }
+
+    //see if we have already checked this time (cached)
+    if($time == $last_time_rate_checked) {
+        return $last_time_rate;
+    }
+
+    //different time, so go through all the ranges that apply
+
+    $maxrate = 1;
+    foreach($timeranges as $timerange_name => $timerange_values) {
+        if(range_applies_to_time($time, $timerange_values['range'])) {
+            $timerate = floatval($timerange_values['rate']);
+            if($timerate > $maxrate) {
+                $maxrate = $timerate;
+            }
+        }
+    }
+
+    $last_time_rate_checked = $time;
+    $last_time_rate = $maxrate;
+
+    return intval($maxrate) ;
+}
+
+
+/**
+ * Starts or resumes an FTP upload by calling the NSM ftp uploader
+ *
+ */
+function start_upload($xferjobid) {
+    $proc_descriptor = array(
+            0 => array("pipe", "r"), //stdin is a pipe that the child will read from
+            1 => array("pipe", "w"),  // stdout is a pipe that the child will write to
+            2 => array("pipe", "w") //stderr a pipe that will be written to
+        );
+
+    $process = proc_open("/usr/lib/bwlimit/scheduledxfer/fork_upload.sh $xferjobid",
+            $proc_descriptor, $pipes);
+
+    echo "Starting upload $xferjobid\n";
+}
+
+
+/**
+ * Starts or resumes a download by calling wget with the -b option that will
+ *
+ */
+function start_download($xferjobid) {
+    $lookup_sql = "SELECT * FROM xfer_requests WHERE requestid = $xferjobid";
+    echo "lookup SQL = $lookup_sql";
+    $lookup_result = mysql_query($lookup_sql);
+    $lookup_arr = mysql_fetch_assoc($lookup_result);
+
+    $errormsg = "";
+    //we are gonna use squid pam auth instead...
+    $proc_descriptor = array(
+        0 => array("pipe", "r"), //stdin is a pipe that the child will read from
+        1 => array("pipe", "w"),  // stdout is a pipe that the child will write to
+        2 => array("pipe", "w") //stderr a pipe that will be written to
+    );
+    $cwd = "/tmp";
+    $env = array();
+    $url = $lookup_arr['url'];
+    $outputfilename = $lookup_arr['output_file'];
+
+    //make sure that we have a directory for it to go into
+    $destdirname = dirname($outputfilename);
+    echo "destdirname = $destdirname";
+    exec ("/bin/mkdir -p '$destdirname'");
+    exec ("/bin/chown www:www $destdirname");
+
+
+
+    /*
+     * What we will do is open a wget background process, read the output
+     * from that and then use that to find out the pid that has been launched
+     *
+     */
+    $process = proc_open("/usr/bin/wget --continue --background --tries=0 "
+        . " --output-document=\"$outputfilename\" "
+        . " --output-file=\"$outputfilename-download-log.txt\" "
+        ." \"$url\"  ", $proc_descriptor, $pipes);
+    if(is_resource($process)) {
+        // $pipes now looks like this:
+        // 0 => writeable handle connected to child stdin
+        // 1 => readable handle connected to child stdout
+        //fputs($pipes[0], "$username $pass\n");
+        //fclose($pipes[0]);
+
+        $line = "";
+        $firstline = "";
+        $count = 0;
+        while(($line = fgets($pipes[1]))) {
+            if($count == 0) {
+                $firstline = $line;
+            }
+            $count++;
+            echo $line;
+        }
+
+        $groups = array();
+        preg_match('/pid (\d+)/', $firstline, &$groups);
+        $pid = $groups[1];
+
+        //now update the status of this in the database
+        $utime_now = time();
+        $download_update_stmt = "UPDATE xfer_requests SET `pid` = $pid "
+            . ", status = 'inprogress', last_counted = $utime_now, comment = 'Starting...' "
+            . " WHERE requestid = $xferjobid";
+        mysql_query($download_update_stmt);
+
+        proc_close($process);
+    }
+}
+/**
+ * Function to check if a given timerange applies to a given time
+ *
+ * returns true if it does, false otherwise
+ *
+ * Timerange should be in the squid format [Day Initials] [StartTime-FinishTime]
+ *
+ * Finish Time must be greater than Start Time (e.g. cannot wrap around midnight)
+ *
+ * @param <type> $time
+ * @param <type> $rangestr
+ */
+function range_applies_to_time($time, $rangestr) {
+    global $days_squidnames;
+    //split this up into the day section and
+
+    $day_section = "";
+    $time_section = "";
+
+    if(is_numeric(substr($rangestr, 0, 1))) {
+        //this is a time only str
+        $time_section = $rangestr;
+    }else {
+        $entries = preg_split("/ /", $rangestr);
+        if(count($entries) == 1) {
+            //this is day only
+            $day_section = $rangestr;
+        }else {
+            $day_section = $entries[0];
+            $time_section = $entries[1];
+        }
+    }
+
+    $day_matches = true;
+
+    $time_matches = true;
+
+    $date_info = getdate($time);
+    if($day_section != "") {
+        
+        $day_of_week = $date_info['wday'];
+
+        if(strstr($day_section, $days_squidnames[$day_of_week]) == false) {
+            $day_matches = false;
+        }
+    }
+
+    if($time_section != "") {
+        $time_parts = explode("-", $time_section);
+        $start_time_str = explode(":", $time_parts[0]);
+
+        //check me against manual
+        $hr_now = $date_info['hours'];
+        $min_now = $date_info['minutes'];
+
+
+        $time_matches = false;
+        if( ($hr_now > intval($start_time_str[0])
+                || ($hr_now == intval($start_time_str[0]) && $min_now > intval($min_now)))) {
+            // we are after the start time, lets check finish time
+            $end_time_str = explode(":", $time_parts[1]);
+
+            if($hr_now < intval($end_time_str[0]) ||
+            ($hr_now == intval($end_time_str[0]) && $min_now < intval($end_time_str))) {
+                $time_matches = true;
+            }
+        }
+
+    }
+    
+
+    if($time_matches && $day_matches) {
+        return true;
+    }else {
+        return false;
+    }
+    
+}
+
+
+
+/**
+ * Utility function as we will be counting the days since the epoch as our
+ * means of tracking
+ *
+ * @param <type> $seconds_since_epoch
+ * @return <type>
+ */
+function day_since_epoch($seconds_since_epoch) {
+    return floor($seconds_since_epoch / 86400);
+}
+
+/**
+ *
+ * used to find the amount to add to usage totals from an array...
+ */
+function amount_to_add_from_key($username, $arr) {
+    if($arr[$username]) {
+        return intval($arr[$username]);
+    }
+    
+    return 0;
+}
+
+function insert_all_bandwidth_usage() {
+    global $userbwtotals;
+    global $userbwtotals_bytes;
+
+    echo "\n==============byte totals=============\n";
+    var_dump($userbwtotals_bytes);
+    
+
+    foreach($userbwtotals as $username => $usagetotal) {
+        insert_bandwidth_usage($username);
+    }
+}
+
+/**
+ * Inserts the bandwidth usage of a user to the database
+ *
+ * @global <type> $userbwtotals
+ * @global <type> $userbwtotals_bytes
+ * @global <type> $userbwtotals_saved
+ * @global <type> $userbwtotals_saved_reqs
+ * @param <type> $user
+ */
+function insert_bandwidth_usage($user) {
+    global $userbwtotals;
+
+    //array that counts the raw total in bytes (not token count)
+    global $userbwtotals_bytes;
+
+    //count how much bandwidth the user saved through the cache...
+    global $userbwtotals_saved;
+    global $userbwtotals_saved_reqs;
+
+    
+    //TODO: add latency detection
+    $latency_time_ms = 800;
+
+    $requests_saved = amount_to_add_from_key("user", $userbwtotals_saved_reqs);
+    
+    //time saved = time saved per KB (seconds) x byte count saved x 0.001 (convert to KB) x 1000 (convert to ms)
+    $dltimesaved = 0.04 * amount_to_add_from_key($user, $userbwtotals_saved) * 0.001 * 1000;
+
+    $time_saved = $dltimesaved + ($requests_saved * $latency_time_ms);
+
+    $updateamounts = array(
+        "usage" => amount_to_add_from_key($user, $userbwtotals),
+        "usage_bytes" => amount_to_add_from_key($user, $userbwtotals_bytes),
+        "saved_bytes" => amount_to_add_from_key($user, $userbwtotals_saved),
+        "saved_time" => $time_saved
+    );
+
+    $days_since_epoch = day_since_epoch(time());
+
+    $update_stmt = "UPDATE `usage_logs` SET `usage` = `usage` + $updateamounts[usage] ,"
+        . " `usage_bytes` = `usage_bytes` + $updateamounts[usage_bytes] , "
+        . " `saved_bytes` = `saved_bytes` + $updateamounts[saved_bytes] , "
+        . " saved_time = `saved_time` + $updateamounts[saved_time] "
+        . " WHERE `userlogid` = '$user:$days_since_epoch' ";
+
+    //echo " run update: $update_stmt\n\n";
+    mysql_query($update_stmt);
+
+    //check if this is a new user; if yes then create their record
+    if(mysql_affected_rows() < 1) {
+        $insert_stmt =
+            "INSERT INTO `usage_logs` (`userlogid`, `user`, `dayindex`,  "
+            . "`usage`, `usage_bytes`, `saved_bytes`, `saved_time`) VALUES ( "
+            . "'$user:$days_since_epoch', '$user', '$days_since_epoch', "
+            . "$updateamounts[usage], $updateamounts[usage_bytes], $updateamounts[saved_bytes], "
+            . "$updateamounts[saved_time] )";
+        mysql_query($insert_stmt);
+        //echo " ran $insert_stmt\n\n";
+    }
+
+}
+
+/**
+ *
+ * This function will record an amount of bandwidth as being used by this user
+ *
+ * @param <type> $user
+ * @param <type> $size
+ */
+function count_bandwidth($user, $size) {
+
+
+
+
+    if($size == 0) {
+        return;
+    }
+
+    //check days since epoch
+    $day_since_epoch = day_since_epoch(time());
+    echo "day since epoch: $day_since_epoch\n";
+
+
+    $update_sql = "UPDATE `usage_logs` SET `usage` = `usage` + $size WHERE `userlogid` = '$user:$day_since_epoch'";
+    echo " run update: $update_sql";
+    mysql_query($update_sql);
+
+    //check if this is a new user; if yes then create their record
+    if(mysql_affected_rows() < 1) {
+        //we need to add this user to the db now
+        $insert_sql = "INSERT INTO usage_logs (`userlogid`, `user`, `dayindex`, `usage`) VALUES "
+            . " ('$user:$day_since_epoch', '$user', $day_since_epoch, $size)";
+        mysql_query($insert_sql);
+        echo "Ran insert for $user | $insert_sql";
+    }
+}
+
+
+/**
+ * Get the sum of this user's bandwidth usage from starting between last_day
+ * being the most recent day going back numdays
+ *
+ * Should be in days_since_epoch
+ *
+ * @param <type> $numdays
+ * @param <type> $starting_day
+ */
+function sum_bandwidth_usage($numdays, $last_day, $username, $colName = "usage") {
+    $earliest_day_to_consider = $last_day - $numdays;
+    $query_sql = "SELECT SUM(`$colName`) as totalusage FROM `usage_logs` WHERE `user` = '$username' "
+        . " AND dayindex > $earliest_day_to_consider AND dayindex <=  $last_day";
+    $query_result = mysql_query($query_sql);
+
+    //perhaps nothing done yet...
+    if(mysql_num_rows($query_result) == 0) {
+        return 0;
+    }
+
+    $result_assoc = mysql_fetch_assoc($query_result);
+    return $result_assoc['totalusage'];
+}
+
+/**
+ * This function will check and see if any of the users are over their quota
+ *
+ * If they are over any quota (daily, weekly, or monthly) then they will be
+ * disabled
+ *
+ */
+function checkquotas() {
+    global $BWLIMIT_DEBUGOUTPUT;
+    global $BWLIMIT_DEPRIORATE;
+    global $BWLIMIT_EXCEEDPOLICY;
+
+    global $running_mode;
+    global $somethingelse;
+    global $useriplastseen;
+
+    echo "checking quotas now...\n";
+    
+    echo "Dump of user last seen ip table ==== ...\n";
+    var_dump($useriplastseen);
+
+    $userlist_sql = "SELECT * FROM user_details";
+    $userlist_result = mysql_query($userlist_sql);
+    $userlist_assoc = null;
+
+   
+
+    $days_since_epoch_today = day_since_epoch(time());
+
+    while(($userlist_assoc = mysql_fetch_assoc($userlist_result)) != null) {
+        $username = $userlist_assoc['username'];
+	    $user_ipaddr = $userlist_assoc['active_ip_addr'];
+	    $htbparentclass =  $userlist_assoc['htbparentclass'];
+
+        $currently_within_quota = $userlist_assoc['within_quota'];
+        echo "Doing quota check for $username ...\n";
+
+        $bwusage_today_sql = "SELECT `usage` FROM `usage_logs` WHERE user = '$username'"
+            . " AND dayindex = $days_since_epoch_today";
+        $bwresult_today = mysql_query($bwusage_today_sql);
+        $bwresult_assoc = mysql_fetch_assoc($bwresult_today);
+
+        $within_quota = 1;
+
+        //if this is a guest account so check if they are within time as well
+        if($userlist_assoc['is_guest_acct'] == true) {
+            if($userlist_assoc['expires_utime'] < time()) {
+                //this account has expired
+                $within_quota = 0;
+            }
+        }
+
+        //check daily
+        if($bwresult_assoc['usage'] > $userlist_assoc['daily_limit']) {
+            //over quota, block and continue
+            $within_quota = 0;
+            if($BWLIMIT_DEBUGOUTPUT == true) {
+                echo "Found user $username over daily quota: used " . $bwresult_assoc['usage']
+                    . "b quota is only " . $userlist_assoc['daily_limit'] . "b\n";
+            }
+        }
+
+        if($within_quota == 1) {
+            //check weekly quota
+            $week_usage = sum_bandwidth_usage(7, $days_since_epoch_today, $username);
+            if($week_usage > $userlist_assoc['weekly_limit']) {
+                $within_quota = 0;
+                if($BWLIMIT_DEBUGOUTPUT) {
+                    echo "Found user $username over weekly quota: used " . $week_usage
+                        . "b quota is only " . $userlist_assoc['weekly_limit'] . "b\n";
+                }
+            }else {
+                //check monthly quota
+                $month_usage = sum_bandwidth_usage(30, $days_since_epoch_today, $username);
+                if($month_usage > $userlist_assoc['monthly_limit']) {
+                    $within_quota = 0;
+                    if($BWLIMIT_DEBUGOUTPUT) {
+                        echo "Found user $username over monthly quota: used " . $month_usage
+                            . "b quota is only " . $userlist_assoc['monthly_limit'] . "b\n";
+                    }
+                }
+            }
+        }
+
+        $update_ip_last_seen_time_frag = "";
+        if($running_mode) {
+            if($running_mode == "ByIP" && $useriplastseen[$username]) {
+                $my_current_time = $useriplastseen[$username];
+                $update_ip_last_seen_time_frag = ", `last_ip_activity` = $my_current_time ";
+                $last_time_seen_formatted = date(DATE_RFC1036, $my_current_time);
+                echo "Update useriplastseen for $username time = " .  $useriplastseen[$username] . " ($last_time_seen_formatted)\n";
+            }
+        }
+
+        //TODO - check if they were within quota but are now out of quota to knock them out HERE
+        $sql_quota_stat_update = "UPDATE `user_details` SET `within_quota` = $within_quota "
+            . " $update_ip_last_seen_time_frag WHERE `username` = '$username'";
+        mysql_query($sql_quota_stat_update);
+
+        //check and see if this is someone to deactivate...
+        if($currently_within_quota == 1 && $within_quota ==0 && $BWLIMIT_EXCEEDPOLICY == "cutoff") {
+	            echo "DEACTIVATE: $username has just exceeded quota on $userlist_assoc[active_ip_addr] \n";
+        	    bwlimit_user_ip_control($username, $userlist_assoc['active_ip_addr'],
+                	    false, true);
+	}else if($BWLIMIT_EXCEEDPOLICY == "deprio" && $currently_within_quota != $within_quota) {
+		//re or deprioritize
+		$ceildown = $userlist_assoc['ceildown'];
+		$ceilup = $userlist_assoc['ceilup'];
+           	$rateup = $userlist_assoc['rateup'];
+                $ratedown	= $userlist_assoc['ratedown'];
+                
+		if($within_quota == 0) {
+			$rateup = $BWLIMIT_DEPRIORATE;
+			$ratedown = $BWLIMIT_DEPRIORATE;
+		}
+
+		//check for dynamic rate 
+		$dynamic_rate_query = "SELECT useDynamicRates, SpeedFactorUp, SpeedFactorDown from process_log";
+	        $dynamic_rate_result = mysql_query($dynamic_rate_query);
+        	$dynamic_rate_arr = mysql_fetch_assoc($dynamic_rate_result);
+	       	if($dynamic_rate_arr['useDynamicRates'] == 1) {
+	               	$factordown = floatval($dynamic_rate_arr['SpeedFactorDown']);
+                	$ratedown = intval(floatval($ratedown) * $factordown);
+        	        $ceildown = intval(floatval($ceildown) * $factordown);
+                	$factorup = floatval($dynamic_rate_arr['SpeedFactorUp']);
+	                $rateup = intval(floatval($rateup) * $factorup);
+        	        $ceilup = intval(floatval($ceilup) * $factorup);
+		}
+
+		if($user_ipaddr	!= NULL && $user_ipaddr != "") {
+			$clientdel_cmd = "/usr/lib/bwlimit/htb-gen clear_client $userlist_assoc[active_ip_addr]";
+			$deprio_cmd = "/usr/lib/bwlimit/htb-gen tc_all $userlist_assoc[active_ip_addr] $ratedown $ceildown $rateup $ceilup $htbparentclass";
+			exec($clientdel_cmd);
+			echo "Deprio: Ran $clientdel_cmd\n";
+			exec($deprio_cmd);
+			echo "Deprio: Ran $deprio_cmd\n";
+			//mark the username
+			exec("/usr/lib/bwlimit/markusernamebyip.sh $user_ipaddr $username");
+			echo "Deprio: Ran /usr/lib/bwlimit/markusernamebyip.sh $user_ipaddr $username\n";
+		}else{
+			echo "Client to deprio is not really online actually...\n";
+		}
+        }
+    }
+}
+
+
+/**
+ *
+ * Turns on and off access by IP
+ *
+ * @param <type> $username
+ * @param <type> $ipaddr
+ * @param <type> $active
+ * @param <type> $forcerun - Force a run of the access controller (set to true for restoring service after masq restart)
+ */
+function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false, $login_method = "web") {
+    $current_time = time();
+    global $BWLIMIT_EXCEEDPOLICY;
+    global $BWLIMIT_DEPRIORATE;
+
+    //check the current status
+    $current_status_sql = "SELECT username, ratedown, ceildown, rateup, ceilup, active_ip_addr, last_ip_activity, blockdirecthttps FROM user_details htbparentclass WHERE "
+        . " username = '$username'";
+    $current_status_result = mysql_query($current_status_sql);
+    $current_status_arr = mysql_fetch_assoc($current_status_result);
+
+    //check and see if this user is currently active with another IP - cut it if so
+    if($active == true && $current_status_arr['active_ip_addr'] != "") {
+        $ip_to_deactivate = $current_status_arr['active_ip_addr'];
+        if($ip_to_deactivate != $ipaddr) {
+            exec("/usr/lib/bwlimit/netspeedmanager_ipcontrol --deactivate $ip_to_deactivate");
+            //make sure that any existing connections are cut off
+            exec("/usr/lib/bwlimit/cutter $ip_to_deactivate");
+	    $myinterface = `/sbin/e-smith/db configuration getprop InternalInterface Name`;
+            exec("/usr/lib/bwlimit/timelimit -T 6 -t 5 /usr/sbin/tcpkill -i $myinterface host $ip_to_deactivate");
+        }
+    }
+
+    $currently_active = ($current_status_arr['active_ip_addr'] == $ipaddr);
+
+    $sql = "";
+    if($active) {
+        $sql = "Update user_details set active_ip_addr = '$ipaddr', last_ip_activity = $current_time "
+            . " , login_method = '$login_method', session_start_time = $current_time WHERE username = '$username'";
+    }else {
+        //we need to deactivate, remove it from the ip list and call commands to
+        //block the previously recorded ip
+        $sql = "Update user_details set active_ip_addr = '' WHERE username = '$username'";
+    }
+    //echo "setting IP using $sql \n";
+    mysql_query($sql);
+
+    //TODO: Activate IP tables rules etc.
+    $iparg = "--deactivate";
+    if($active == true) {
+        
+        $iparg = "--activate";
+    }
+
+    //make sure that we only do this if we need a change...
+    if($currently_active != $active || $forcerun == true) {
+	$ratedown = intval($current_status_arr['ratedown']);
+	$ceildown = intval($current_status_arr['ceildown']);
+	$rateup = intval($current_status_arr['rateup']);
+	$ceilup = intval($current_status_arr['ceilup']);
+	$blockdirecthttps = intval($current_status_arr['blockdirecthttps']);
+    $htbparentclass = intval($current_status_arr['htbparentclass']);
+    
+	//if the user is not within quota this function should only have been called when deprio poliy is active
+	//set their reserved rates to be only 'depriorate'
+	if(user_within_quota($username) != 1) {
+		$ratedown = intval($BWLIMIT_DEPRIORATE);
+		$rateup = intval($BWLIMIT_DEPRIORATE);
+	}
+
+	//check and see if we are using dynamic rates
+	
+	$dynamic_rate_query = "SELECT useDynamicRates, SpeedFactorUp, SpeedFactorDown from process_log";
+	$dynamic_rate_result = mysql_query($dynamic_rate_query);
+	$dynamic_rate_arr = mysql_fetch_assoc($dynamic_rate_result);
+	if($dynamic_rate_arr['useDynamicRates'] == 1) {
+		$factordown = floatval($dynamic_rate_arr['SpeedFactorDown']);
+		$ratedown = intval(floatval($ratedown) * $factordown);
+		$ceildown = intval(floatval($ceildown) * $factordown);
+		$factorup = floatval($dynamic_rate_arr['SpeedFactorUp']);
+		$rateup = intval(floatval($rateup) * $factorup);
+		$ceilup = intval(floatval($ceilup) * $factorup);
+	}
+
+        exec("/usr/lib/bwlimit/netspeedmanager_ipcontrol $iparg $ipaddr $ratedown $ceildown $rateup $ceilup $blockdirecthttps $username $htbparentclass");
+        //make sure that any existing connections are terminated
+        if($active == false) {
+            $kill_cmd = "/usr/lib/bwlimit/netspeedmanager_killclient $ipaddr";
+            exec($kill_cmd);
+        }
+    }
+
+
+    return true;
+}
+
+
+
+
+/**
+ * Simple utility function to determine if a user is within their quota or not
+ * 
+ * return 1 if yes, 0 otherwise
+ */
+function user_within_quota($username) {
+    $lookup_sql = "SELECT within_quota from user_details";
+    $lookup_result = mysql_query($lookup_sql);
+    $lookup_arr = mysql_fetch_array($lookup_result);
+    return intval($lookup_arr[0]);
+}
+
+/**
+ * Check file size of http download
+ */
+function remote_filesize($url)
+{
+   ob_start();
+   $ch = curl_init($url);
+   curl_setopt($ch, CURLOPT_HEADER, 1);
+   curl_setopt($ch, CURLOPT_NOBODY, 1);
+
+   $ok = curl_exec($ch);
+   curl_close($ch);
+   $head = ob_get_contents();
+   ob_end_clean();
+
+   $regex = '/Content-Length:\s([0-9].+?)\s/';
+   $count = preg_match($regex, $head, $matches);
+
+   return isset($matches[1]) ? intval($matches[1]) : -1;
+}
+
+/**
+* Look and see if we need to autoreset passwords 
+*/
+function check_autoreset_users() {
+  $timestr = date("Ymd");
+  $sql_query = "SELECT * FROM autoreset_users WHERE applyday = '$timestr' AND actioned = 0";
+  $sql_result = mysql_query($sql_query);
+  $sql_arr = null;
+
+  $resetcount = 0;
+  while(($sql_arr = mysql_fetch_assoc($sql_result)) != null) {
+	$username = $sql_arr['username'];
+	$password = $sql_arr['password'];
+	$auid = $sql_arr['auid'];
+	exec("/usr/lib/bwlimit/userpasswordreset_cron.sh $username $password");
+	echo "   Auto Reset: $username / $password\n";
+	$update_sql = "UPDATE autoreset_users SET actioned = 1 WHERE auid = $auid";
+	mysql_query($update_sql);
+	
+	
+	$user_update_sql = "update user_details set active_ip_addr = '' WHERE username = '$username'";
+    mysql_query($user_update_sql);
+    
+    $delete_savedmac_sql = "DELETE FROM usersavedmacs WHERE username = '$username'";
+    mysql_query($delete_savedmac_sql);
+
+	$resetcount++;
+  } 
+
+  if($resetcount > 0) {
+	//demand a full reset of iptables etc
+	echo "Auto username and password reset ran - doing full reset\n";
+	exec("/usr/lib/bwlimit/bwlimit-reset");
+  }
+}
+
+
+/**
+* Check and see if we have a graph data problem of any kind
+*/
+function graphcheck() {
+    //time until we expect a good data set / get alarmed
+    $gracetime = 600;
+    $bwlimit_time = intval(trim(`cat /var/run/bwlimit/bwlimit_startup.time`));
+    //if((time() - $bwlimit_time) > $gracetime) {
+    if(TRUE) {
+        $oldest_time = time() - $gracetime;
+        $totalok = 1;
+        $clientok = 1;
+        $totalcheck_sql = "SELECT stamp_inserted FROM data_usage_total WHERE stamp_inserted > $oldest_time";
+        echo "run $totalcheck_sql \n";
+        $totalcheck_result = mysql_query($totalcheck_sql);
+        
+        if(mysql_fetch_assoc($totalcheck_result) == null) {
+            echo "Found nothing in total result = $totalcheck_result first row looks not ok\n";
+            $totalok = 0;
+        }
+        
+        //check if there are active clients by looking at the directory.  Scan will return
+        // .. and . as names, so length of array should be > 2
+        $client_classes = @scandir("/var/current_BWL_clients");
+        if($client_classes !== FALSE && sizeof($client_classes) > 2) {
+            //there are active clients -there should be client data
+            $sql_client_data = "SELECT username FROM data_usage WHERE stamp_inserted > $oldest_time LIMIT 4";
+            $sql_client_data_result = mysql_query($sql_client_data);
+            if(mysql_num_rows($sql_client_data_result) < 4) {
+                $clientok = 0;
+            }
+        }
+        
+        if($totalok == 0 || $clientok == 0) {
+            echo "WARNING: TOTALOK: $totalok / CLIENTOK : $clientok - resetting some things \n";
+            #exec("/etc/init.d/masq restart");
+            #exec("/usr/bin/sv restart nsmcalcbytes");
+        }else {
+            echo "Checked Graphs - LOOKS OK\n";
+        }
+    }else {
+        echo "within grace time";
+    }
+}
+
+
+?>

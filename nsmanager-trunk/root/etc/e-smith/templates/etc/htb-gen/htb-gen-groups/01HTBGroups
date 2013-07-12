@@ -1,0 +1,11 @@
+{
+    use esmith::bwlimit::bwlimit_utils;
+    
+    my @rootgroups = get_group_childclasses_by_classid("root");
+    
+    for $currentgroupid (@rootgroups) {
+	$OUT .= "# Group id = $currentgroupid \n";
+	
+	$OUT .= make_htbgroup($currentgroupid);
+    }
+}

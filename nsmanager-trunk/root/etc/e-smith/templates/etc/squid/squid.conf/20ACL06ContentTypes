@@ -1,0 +1,4 @@
+
+acl squid_flash rep_mime_type ^application/x-shockwave-flash$
+acl squid_streaming_media rep_mime_type ^(video/x-ms-asf|application/vnd.ms.wms-hdr.asfv1|application/x-mms-framed|video/x-ms-asf)$
+acl squid_ads dstdom_regex -i "/usr/lib/bwlimit/squid_ads"

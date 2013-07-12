@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#
+# Adds the route to check 
+#
+
+backuptestip=$(/sbin/e-smith/db configuration getprop wanbackup backuptestip)
+EXISTINGROUTE=$(route -n | grep ^$backuptestip | awk ' { print $1 } ')
+
+#delete just in case we have old stuff hanging around
+if [ "$EXISTINGROUTE" != "" ]; then
+	route del $EXISTINGROUTE
+fi
+
+#
+#find out what we need to
+
+backupdev=$(/sbin/e-smith/db configuration getprop wanbackup current_backup_dev)
+backupgateway=$(/sbin/e-smith/db configuration getprop wanbackup current_backup_gateway)
+
+GWSECTION=""
+
+if [ "$GWSECTION" != "" ]; then
+	GWSECTION=" gw $backupgateway "
+fi
+
+route add $backuptestip $GWSECTION dev $backupdev
+

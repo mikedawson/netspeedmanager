@@ -1,0 +1,43 @@
+#!/usr/bin/perl -wT
+
+#
+# This will make sure all groups have a valid tc class id to use
+# 
+
+use strict;
+use warnings;
+
+
+use esmith::bwlimit::bwlimit_utils;
+use esmith::FormMagick;
+use esmith::AccountsDB;
+use esmith::ConfigDB;
+
+
+our $db = esmith::ConfigDB->open();
+our $adb = esmith::AccountsDB->open();
+
+#now find the where to start
+my $start_class_id = 7800;
+
+my @group_list = $adb->groups;
+for my $current_group (@group_list) {
+    my $group_id = $current_group->prop("BWGroupClassID") || "0";
+    $group_id = int($group_id);
+    if($group_id > $start_class_id) {
+        $start_class_id = $group_id;
+    }
+}
+
+#we now know where to start - go throuhg and find groups with no id
+#we add two here as each one has two classes really - upload and download
+my $current_id_assign =  $start_class_id + 2;
+for my $current_group (@group_list) {
+    my $group_id = $current_group->prop("BWGroupClassID") || "";
+    if($group_id eq "") {
+	$current_group->set_prop("BWGroupClassID", $current_id_assign);
+	$current_id_assign += 2;
+    }
+}
+
+

@@ -1,0 +1,61 @@
+!
+! pmacctd configuration example
+!
+! Did you know CONFIG-KEYS contains the detailed list of all configuration keys
+! supported by 'nfacctd' and 'pmacctd' ?
+!
+! debug: true 
+!
+interface: { $InternalInterface{Name} }
+daemonize: true
+! aggregate: src_host,dst_host,
+! aggregate: src_net,dst_net 
+! plugins: pgsql 
+
+{
+     use esmith::util ;
+     
+}
+
+
+
+plugins: mysql[in], mysql[out], mysql[squid_in], mysql[squid_out]
+
+aggregate[squid_in]: dst_host, src_port, src_host, dst_port
+aggregate[squid_out]: src_host, dst_port, dst_host, src_port
+
+aggregate_filter[squid_in]: dst net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) } and src port 3128
+aggregate_filter[squid_out]: src net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) } and dst port 3128
+
+aggregate[in]: dst_host
+aggregate[out]: src_host
+
+
+
+aggregate_filter[in]: dst net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) } and not src net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) }
+aggregate_filter[out]: src net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) } and not dst net { esmith::util::computeLocalNetworkShortSpec($InternalInterface{Network}, $InternalInterface{Netmask}) }
+sql_db: bwlimits
+
+sql_table[in]: acct
+sql_table[out]: acct
+sql_table[squid_in]: acct_squid
+sql_table[squid_out]: acct_squid
+
+sql_table_version: 1
+sql_passwd: { $BWLimit{DbPassword} }
+sql_user: bwlimit
+
+! don't know what this should be
+sql_refresh_time: 300
+! sql_optimize_clauses: true
+sql_history: 1m 
+sql_history_roundoff: m
+sql_dont_try_update: true
+! sql_preprocess: qnum=1000, minp=5
+!
+! networks_file: ./networks.example
+! ports_file: ./ports.example
+! sampling_rate: 10
+! sql_trigger_time: 1h
+! sql_trigger_exec: /home/paolo/codes/hello.sh  
+!

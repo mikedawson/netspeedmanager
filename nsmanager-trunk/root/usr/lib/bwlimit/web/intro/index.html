@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<html>
+	<head>
+		<link rel='stylesheet' href='./slideshow.css' type='text/css'/>
+		<title>Net Speed Manager Introduction</title>
+		<style> body{
+				direction:ltr;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<!-- Main slideshow script -->
+		<script src='./slideshow.js' type='text/javascript'>
+		&#120;
+		</script>
+		
+		
+		<div id='slidetemplatecontainer'>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+			<div></div>
+
+			
+		</div>
+		
+		
+		
+		<!-- The main container for the slide show -->
+		<table id='maintable' border='1' cellspacing='0' cellpadding='0' align='center'>
+		        <!--
+			<tr>
+				<td style='background:#ff3300 url(creditlogo.jpg) no-repeat top right; height: 57px; margin: 0px;' colspan='2'>
+					<h2 id='maintitle'> Net Speed Manager</h2>
+					
+				</td>
+				
+				
+			</tr>
+			-->
+			
+			<tr>
+				<!-- the cell / container where the slide show images go -->
+				<td rowspan='2' id='slideContainerTd'>
+					<div id='slideContainer'></div>
+				</td>
+				
+				<!-- the  container for the picture of the story user -->
+				<td valign='top' id='picarea'>
+					<img src='nadia.jpg' id='storyuserpic' align='left'/>
+					
+				</td>
+			</tr>
+			
+			<tr>
+				<!-- the container for the text of the story -->
+				<td>
+					<div id='textContainer'>
+					&#0;
+					</div>
+				</td>
+			</tr>
+			
+			<!-- Status Line -->
+			<tr>
+				<td colspan='2'>
+					<!-- Control buttons -->
+					<table width='490' cellpadding='0' cellspacing='0' border='0'>
+						<tr>
+							<td width='24'>
+								<div id='backbutton' class='button' onclick='changeSlide(currentIndex-1)'>
+									&lt;
+								</div>
+							</td>
+							
+							<!--Loaded <span id='numloadedspan'>&nbsp;</span> of <span id='totalnumberspan'>&nbsp;</span> -->
+							<td id='barContainer'>
+								
+							</td>
+							
+							<td width='32'>
+								<div id='forwardbutton' class='button' onclick='changeSlide(currentIndex+1)'>
+									&gt;
+								</div>
+							</td>
+						</tr>
+					</table>
+				
+				</td>	
+			</tr>
+		</table>
+		
+		<script type='text/javascript'>
+		init();
+		</script>
+	</body>
+</html>

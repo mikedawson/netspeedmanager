@@ -1,0 +1,72 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Custom Site Lists
+ # navigation  : 3000 3150
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit_customlist;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit_customlist->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()">
+
+         <description>FORM_DESCRIPTION</description>
+
+         <subroutine src="show_initial()" />
+
+         <subroutine src="print_bwlimit_customlist_table()" />
+     </page>
+     <page name="BWLIMIT_NEW_CUSTOMLIST"
+            pre-event="turn_off_buttons()"
+            post-event="modify_bwlimit_customlist">
+
+
+            <description>CUSTOMLIST_CREATE_DESC</description>
+
+            <field type="text" id="CustomListName" validation='check_customlist_name'>
+                <label>LABEL_CUSTOMLIST_NAME</label>
+            </field>
+
+             <field type="textarea" id="CustomListSites">
+                 <label>LABEL_CUSTOMLIST_DATA</label>
+             </field>
+
+             <subroutine src="print_button('ADD')" />
+
+     </page>
+
+    <page name="BWLIMIT_MODIFY_CUSTOMLIST"
+             pre-event="turn_off_buttons()"
+             post-event="modify_bwlimit_customlist()" >
+
+         <description>CUSTOMLIST_DESC</description>
+
+         <field type="literal" id="CustomListName" >
+             <label>LABEL_CUSTOMLIST_NAME</label>
+         </field>
+
+         <subroutine src="print_sitelist()"/>
+
+
+         <subroutine src="print_button('SAVE')" />
+     </page>
+
+    <page name="BWLIMIT_REMOVE_CUSTOMLIST" pre-event="turn_off_buttons()" post-event="remove_customlist()">
+        <title>REMOVE_CUSTOMLIST_TITLE</title>
+        <description>REMOVE_CUSTOMLIST_DESC</description>
+	<subroutine src="print_remove_text()" />
+        <subroutine src="print_button('REMOVE')" />
+    </page>
+
+
+</form>

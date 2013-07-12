@@ -1,0 +1,48 @@
+SEC (Simple Event Correlator) 2.5.3
+
+Introduction:
+-------------
+SEC is a simple event correlation tool that reads lines from files, named
+pipes, or standard input, and matches the lines with regular expressions, 
+Perl subroutines, and other patterns for recognizing input events. 
+Events are then correlated according to the rules in configuration files,
+producing output events by executing user-specified shell commands, by 
+writing messages to pipes or files, etc.
+
+Availability:
+-------------
+This program is distributed under the terms of GNU General Public License, 
+and can be downloaded from http://simple-evcorr.sourceforge.net
+
+Release Notes:
+--------------
+SEC has been tested primarily on Linux and Solaris, but since it is written 
+in perl and does not use any platform dependent subroutines, it should also
+work on other OS platforms.
+Since SEC employs the perl qr// operator that was introduced in perl 5.005, 
+perl 5.005 or higher is required for running SEC. Because SEC is generally 
+not tested against outdated perl releases, it is recommended to run SEC 
+with at least perl 5.6 (see http://www.perl.org for the latest stable perl 
+release). 
+SEC also uses perl Getopt, POSIX, Fcntl, IO::Handle, and Sys::Syslog modules, 
+but those modules are included in the standard installation of perl.
+
+Files in this package:
+----------------------
+COPYING - copy of GNU General Public License
+ChangeLog - changes starting from version 1.0
+README - this file
+contrib - SEC user contributions
+sec.pl - SEC program
+sec.pl.man - SEC man page
+
+Author: 
+-------
+Risto Vaarandi (ristov at users d0t s0urcef0rge d0t net)
+
+Acknowledgements:
+-----------------
+This work is supported by SEB.
+I wish to thank the following people for supplying software patches and 
+documentation fixes: Al Sorrell, James Brown, John P. Rouillard, Jon Frazier,
+Mark D. Nagel, Rick Casey, and William Gertz.

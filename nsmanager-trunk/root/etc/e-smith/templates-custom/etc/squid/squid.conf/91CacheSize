@@ -1,0 +1,1 @@
+cache_dir ufs /var/spool/squid 7000 80 256

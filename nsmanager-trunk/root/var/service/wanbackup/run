@@ -1,0 +1,34 @@
+#! /bin/sh
+
+exec 2>&1
+config=$(/sbin/e-smith/config getprop wanbackup setup)
+
+
+if [ "$config" != "none" ]; then
+	#make sure that main WAN is up and running now
+	#then check the primary
+	sleep 40
+	/usr/lib/bwlimit/wanbackup-checkprimary
+
+	#add the primary check route
+	PRIMARYCHECKIP=$(/sbin/e-smith/config getprop wanbackup primarytestip)
+	ROUTELINE=$(route -n | grep ^$PRIMARYCHECKIP)
+	if [ "$ROUTELINE" != "" ]; then
+		route del $PRIMARYCHECKIP
+	fi
+
+	PRIMARYGATEWAY=$(route -n | grep ^0.0.0.0 | awk ' { print $2 } ')
+	route add $PRIMARYCHECKIP gw $PRIMARYGATEWAY
+fi
+
+
+if [ -x run.$config ]
+then
+    exec ./run.$config
+    echo "$(date)" >> ./ranme
+#	exec ./dummy
+	
+fi
+
+echo script run.$config not found - please report this as a bug
+sleep 100

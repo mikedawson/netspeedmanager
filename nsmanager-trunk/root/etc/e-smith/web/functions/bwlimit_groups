@@ -1,0 +1,118 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Per Group
+ # navigation  : 3000 3150
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit_groups;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit_groups->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()">
+
+         <description>FORM_DESCRIPTION</description>
+
+         <subroutine src="print_bwlimit_table_groups()" />
+     </page>
+
+    <page name="BWLIMIT_PAGE_GROUPMEMBERS"
+	     pre-event="turn_off_buttons()"
+	     post-event="modifiy_bwlimit_groupmembers()" >
+	<description>Group Members Here</description>
+	<subroutine src="print_groupmember_table()" />
+	<subroutine src="print_button('SAVE')" />
+    </page>
+
+
+    <page name="BWLIMIT_PAGE_MODIFY"
+             pre-event="turn_off_buttons()"
+             post-event="modify_bwlimit()" >
+
+         <description>BWLIMIT_GROUP_DEFDESC</description>
+
+         <field type="literal" id="User" >
+             <label>LABEL_USER</label>
+         </field>
+
+         <field type="text" id="BWLimitDaily" validation="integer">
+             <label>LABEL_BWLIMITDAILY</label>
+         </field>
+
+         <field type="text" id="BWLimitWeekly" validation="integer">
+             <label>LABEL_BWLIMITWEEKLY</label>
+         </field>
+
+         <field type="text" id="BWLimitMonthly" validation="integer">
+             <label>LABEL_BWLIMITMONTHLY</label>
+         </field>
+
+	 <field type="text" id="BWLimitRateDown" validation="integer">
+             <label>LABEL_BWLIMITRATEDOWN</label>
+         </field>
+
+         <field type="text" id="BWLimitCeilDown" validation="validate_rate(BWLimitRateDown, BWLimitCeilDown)">
+             <label>LABEL_BWLIMITCEILDOWN</label>
+         </field>
+
+         <field type="text" id="BWLimitRateUp" validation="integer">
+             <label>LABEL_BWLIMITRATEUP</label>
+         </field>
+
+         <field type="text" id="BWLimitCeilUp" validation="validate_rate(BWLimitRateUp, BWLimitCeilUp)">
+             <label>LABEL_BWLIMITCEILUP</label>
+         </field>
+
+        <field type="select" options="'' => '-', 'n' => 'No', 'y' => 'Yes'" id='BWLimit_blockdirecthttps'>
+            <label>LABEL_HTTPSNOPROXY</label>
+        </field>
+
+
+	<field type="select" id="BWLimitGroupIsClass" options="'n' => 'No', 'y' => 'Yes'" value="get_acc_value('BWLimitGroupIsClass')">
+	      <label>LABEL_BWLIMIT_GROUPISCLASS</label>
+	      <description>DESC_BWLIMITGROUP</description>
+	</field>
+
+	<field type="select" id="BWLimitParentGroupClass" options="get_parent_group_options()" value="get_acc_value('BWLimitParentGroupClass')">
+		<label>LABEL_BWLIMIT_PARENTGROUPCLASS</label>
+	</field>
+
+
+	 <field type="text" id="BWLimitGroupRateDown" validation="integer" value="get_acc_value('BWLimitGroupRateDown')">
+             <label>LABEL_BWLIMITGROUPRATEDOWN</label>
+         </field>
+
+         <field type="text" id="BWLimitGroupCeilDown" validation="validate_rate_group(BWLimitGroupRateDown, BWLimitGroupCeilDown)" value="get_acc_value('BWLimitGroupCeilDown')">
+             <label>LABEL_BWLIMITGROUPCEILDOWN</label>
+         </field>
+
+         <field type="text" id="BWLimitGroupRateUp" validation="integer" value="get_acc_value('BWLimitGroupRateUp')">
+             <label>LABEL_BWLIMITGROUPRATEUP</label>
+         </field>
+
+         <field type="text" id="BWLimitGroupCeilUp" validation="validate_rate_group(BWLimitGroupRateUp, BWLimitGroupCeilUp)" value="get_acc_value('BWLimitGroupCeilUp')">
+             <label>LABEL_BWLIMITGROUPCEILUP</label>
+         </field>
+
+
+	<field type="select" value='allgroup' options="'allgroup' => 'Update all group members now', 'defaultsonly' => 'Set as group 
+default only'" id='applymethod'>
+		<label>LABEL_APPLYMETHOD</label>
+		<description>DESC_APPLYMETHOD</description>
+	</field>
+
+
+         <subroutine src="print_aclist_table()" />
+
+         <subroutine src="print_button('SAVE')" />
+     </page>
+</form>

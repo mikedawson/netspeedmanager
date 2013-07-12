@@ -1,0 +1,11 @@
+#!/bin/bash
+
+METHOD=$(/sbin/e-smith/db configuration getprop BWLimit configmethod)
+
+if [ "$METHOD" == "now" ]; then
+	/sbin/e-smith/signal-event bwlimit-full-update
+else
+	/bin/touch /usr/lib/bwlimit/reset-required
+fi
+
+

@@ -1,0 +1,88 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Time Ranges
+ # navigation  : 3000 3150
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit_timeranges;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit_timeranges->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()">
+
+         <description>FORM_DESCRIPTION</description>
+
+         <subroutine src="show_initial()" />
+
+         <subroutine src="print_bwlimit_timerange_table()" />
+     </page>
+
+     <page name="BWLIMIT_PAGE_TIMERANGE_CREATE"
+            pre-event="turn_off_buttons()"
+            post-event="modify_bwlimit_timerange">
+
+
+            <description>TIMERANGE_CREATE_DESC</description>
+
+            <field type="text" id="TimeRangeName" validation="check_timelist_name" >
+                <label>LABEL_TIMERANGE_NAME</label>
+            </field>
+
+	
+        <subroutine src="print_timecontrol()" />
+
+	
+             <field type="text" id="TimeRangeRate">
+                <label>LABEL_TIMERANGE_RATE</label>
+             </field>
+
+             <subroutine src="print_button('ADD')" />
+
+     </page>
+
+     <page name="BWLIMIT_PAGE_TIMERANGE_MODIFY"
+             pre-event="turn_off_buttons()"
+             post-event="modify_bwlimit_timerange()" >
+
+         <description>TIMERANGE_DESC</description>
+
+         <field type="literal" id="TimeRangeName">
+             <label>LABEL_TIMERANGE_NAME</label>
+         </field>
+
+	<!--
+         <field type="text" id="TimeRangeData">
+             <label>LABEL_TIMERANGE_DATA</label>
+         </field>
+	-->
+
+	<subroutine src="print_timecontrol()" />
+
+         <field type="text" id="TimeRangeRate" validation="integer">
+            <label>LABEL_TIMERANGE_RATE</label>
+         </field>
+
+
+         <subroutine src="print_button('SAVE')" />
+     </page>
+
+    <page name="BWLIMIT_REMOVE_TIMERANGE" pre-event="turn_off_buttons()" post-event="remove_timerange()">
+        <title>REMOVE_TIMERANGE_TITLE</title>
+        <description>REMOVE_TIMERANGE_DESC</description>
+        <subroutine src="print_remove_text()" />
+        <subroutine src="print_button('REMOVE')" />
+    </page>
+
+ </form>
+
+

@@ -1,6 +1,9 @@
 #Net Speed Manager count cron job
 */5 * * * * root /usr/lib/bwlimit/bwlimit-count-cron.php.php
 
+#Net Speed Manager scheduled download system
+* * * * * root /usr/lib/bwlimit/bwlimit-scheduledxfer-cron.php
+
 #ISP up test and regular bandwidth test
 * * * * * root /usr/lib/bwlimit/pingtest
 0 * * * * root /usr/lib/bwlimit/calcBandwidth

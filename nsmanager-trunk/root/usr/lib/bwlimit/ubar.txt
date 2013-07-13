@@ -1,1 +1,0 @@
-Current bandwidth utilization   0.00 kbit/s

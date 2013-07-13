@@ -470,50 +470,6 @@ function check_pid_running($pid) {
     }
 }
 
-/**
- * Opens up a wget log according to the given filename and then returns an array
- *
- * completed - true / false
- */
-function check_wget_log($logfilename) {
-    $charsperline = 82;
-    $linestoconsider = 10;
-    $fd = fopen($logfilename, "r");
-    $logfilesize = filesize($logfilename);
-    $lines = array();
-
-    //because of the chance of large logs try to skip if possible some lines...
-    if($logfilesize > ($charsperline * $linestoconsider)) {
-        $bytestoskip = $logfilesize - ($charsperline * $linestoconsider);
-        fseek($fd, $bytestoskip);
-    }
-
-    $lineread = null;
-    $linecount = 0;
-    while(($lineread = fgets($fd))) {
-        $lines[$linecount] = $lineread;
-        $linecount++;
-    }
-
-    //look for the magic word 'saved'
-    $dlcomplete = false;
-    for($i = sizeof($lines) - 1; $i >= 0; $i--) {
-        $currentmatches = array();
-        preg_match('/.* (saved) .*/', $lines[$i], &$currentmatches);
-        if($currentmatches[1] && $currentmatches[1] == 'saved') {
-            //found the magic word saved - return this info
-            $dlcomplete = true;
-            break;
-        }
-    }
-
-    $returnval = array();
-    $returnval['completed'] = $dlcomplete;
-
-    return $returnval;
-}
-
-
 echo "hmmm...\n\n";
 
 //Load fundamentals of the system setup

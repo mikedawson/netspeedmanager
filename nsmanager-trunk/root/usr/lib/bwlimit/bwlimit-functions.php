@@ -1000,5 +1000,18 @@ function check_wget_log($logfilename) {
     return $returnval;
 }
 
+/*
+ * Check to see if a given PID is still running
+ */
+function check_pid_running($pid) {
+    $cmd = "ps $pid";
+    exec($cmd, $output, $result);
+    if(count($output) >= 2) {
+        return true;
+    }else {
+        return false;
+    }
+}
+
 
 ?>

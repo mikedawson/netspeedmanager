@@ -7,6 +7,8 @@ require_once "../bwlimit-functions.php";
 require_once "bwlimit_user_config.php";
 
 connectdb();
+check_login();
+
 
 $action = $_REQUEST['action'];
 
@@ -60,10 +62,9 @@ if($action == 'schedule') {
         <div id="maincontainer">
         <?php echo make_nsm_header(); ?>
         <?php
-        if(!$_SESSION['user']) {
+        if(!$username) {
             echo "Session Expired";
         }else if($action == 'schedule') {
-            
             echo "OK - Return to scheduled transfer manager "
                 . "<a href='nsm_user_scheduledxfermgr.php'>click here</a>";
         }else {

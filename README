@@ -1,0 +1,15 @@
+
+Net Speed Manager Contrib
+
+Building:
+
+1. git clone <src>
+
+2. ./rebuildnsm.sh
+
+3. to avoid md5sum mismatch issues comment out from /etc/rpm/macros.prelink - e.g.
+
+# %__prelink_undo_cmd     /usr/sbin/prelink prelink -y library
+Note: https://bugzilla.redhat.com/show_bug.cgi?id=149465
+
+

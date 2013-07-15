@@ -258,6 +258,7 @@ if($speedtest_arr) {
 	
 </table>
 </form>
+<a href="nsm_user_scheduledxfermgr.php">Schedule Download</a> |
 <a href='#' onclick="showToolbar()">Show My Toolbar</a> | <a href='./current_bw_usage.php?section=daily'>Transfer Reports</a> | 
 <a href='/server-manager/'>Admin Control Panel</a>
 

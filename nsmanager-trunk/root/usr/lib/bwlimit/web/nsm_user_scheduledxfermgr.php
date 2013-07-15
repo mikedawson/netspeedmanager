@@ -10,6 +10,9 @@ require_once "bwlimit_user_config.php";
 
 connectdb();
 
+check_login();
+$username = $_SESSION['user'];
+
 $action = $_REQUEST['action'];
 
 if($action == "pause") {
@@ -18,9 +21,8 @@ if($action == "pause") {
     $pause_update_sql = "UPDATE xfer_requests SET status='req_pause', "
         . "comment = 'Waiting for server to pause download...' "
         . "WHERE requestid = "
-        . "\"$request_to_pause\" AND user = '$_SESSION[user]'";
+        . "\"$request_to_pause\" AND user = '$username'";
     mysql_query($pause_update_sql);
-    echo "Attempted pause using $pause_update_sql\n";
 }else if($action == 'reschedule') {
     $request_to_resched = $_REQUEST['xferid'];
     $newtime = $_REQUEST['newtime'];
@@ -34,7 +36,7 @@ if($action == "pause") {
 
     $reschedule_sql = "UPDATE xfer_requests SET start_time = $newtime_utime, "
         . " status = 'waiting', Comment = 'Waiting until $newtime_hrs:$newtime_mins to start' "
-        . " WHERE requestid = $request_to_resched AND `user` = '$_SESSION[user]'";
+        . " WHERE requestid = $request_to_resched AND `user` = '$username'";
     mysql_query($reschedule_sql);
 }
 
@@ -45,6 +47,7 @@ if($action == "pause") {
     <head>
         <link rel='stylesheet' href='netspeedmanager_userstyle.css' type='text/css'/>
         <title>Net Speed Manager Scheduled Transfer Request</title>
+        <script src="nsm_user_scheduledxfermgr.js" type="text/javascript"></script>
 
          <script type='text/javascript'>
             function reschedule(requestid) {
@@ -77,23 +80,44 @@ if($action == "pause") {
             <br/>&nbsp;
         </p>
 
-        &nbsp;&nbsp;<a href="nsm_schedule_xfer.php">Schedule a new download</a> |
-        <a href="nsm_schedule_ftp_upload.php">Schedule FTP Upload</a><br/>
+        &nbsp;&nbsp;<a href="nsm_schedule_xfer.php">Schedule a new download</a> 
+        <!-- FTP not supported for now |
+        <a href="nsm_schedule_ftp_upload.php">Schedule FTP Upload</a>--><br/>
         <br/>&nbsp;
         <?php
-        if(!$_SESSION['user']) {
+        if(!$username) {
             echo "Session Expired";
         }else {
-            $username = $_SESSION['user'];
+            //$username = $_SESSION['user'];
 
             //show the table
-            $userdownloadtable = make_scheduled_xfer_table($username, false, "./nsm_user_scheduledxfermgr.php");
-            echo $userdownloadtable;
+            //$userdownloadtable = make_scheduled_xfer_table($username, false, "./nsm_user_scheduledxfermgr.php");
+            //echo $userdownloadtable;
+            
+            ?>
+        
+            <table id="xfertable">
+                <tr>
+                    <th>Start Time</th>
+                    <th>Status</th>
+                    <th>URL</th>
+                    <th>Progress</th>
+                    <th>Downloaded</th>
+                    <th>Total Size</th>
+                </tr>
+                
+                
+            </table>
+            <?
+            
         }
 
         echo make_nsm_footer();
         ?>
         </div>
-
+        
+        <script type="text/javascript">
+            requestupdate();
+        </script>
    </body>
 </html>

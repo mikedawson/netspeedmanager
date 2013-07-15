@@ -86,11 +86,11 @@ function update_user_last_seen_cache($username, $time) {
  *
  */
 function clear_inactive_ips() {
-    $date_log = date(DATE_RFC850);
+    global $BWLIMIT_OPTIONS, $running_mode, $ip_activity_timeout, $inactivity_fd, $dhcp_timeout;
 
+    $date_log = date(DATE_RFC850);    
     fwrite($inactivity_fd, $date_log . ": " . "Checking for inactive IPs\n");
 
-    global $BWLIMIT_OPTIONS, $running_mode, $ip_activity_timeout, $inactivity_fd, $dhcp_timeout;
 
     if($running_mode && $running_mode == "ByIP") {
         $find_inactive_ips_sql = "SELECT * FROM user_details WHERE "
@@ -460,29 +460,12 @@ function process_file($filename) {
 
 }
 
-function check_pid_running($pid) {
-    $cmd = "ps $pid";
-    exec($cmd, $output, $result);
-    if(count($output) >= 2) {
-        return true;
-    }else {
-        return false;
-    }
-}
 
 echo "hmmm...\n\n";
 
 //Load fundamentals of the system setup
 init_load_sysvals();
 
-echo "processing squid log file\n\n";
-//Do the main squid log analysis
-//process_file($BWLIMIT_SQUIDACCESSLOG_FILE);
-
-//see how downloads / uploads are going...
-//do this before going through pmacct data so that we can see what users have used
-//before updating the bandwidth usage tables
-checkscheduledxfers();
 
 //Go through pmacct data
 echo "Processing pmacct data\n";
@@ -562,9 +545,12 @@ if(file_exists("/usr/lib/bwlimit/reset-required")) {
 check_autoreset_users();
 
 if($DEBUG_CRON) { 
-    fflush($cron_debug_fd);
-    fclose($cron_debug_fd);
+    if($cron_debug != null) {
+        fflush($cron_debug_fd);
+        fclose($cron_debug_fd);
+    }
 }
+
 
 fflush($inactivity_fd);
 fclose($inactivity_fd);

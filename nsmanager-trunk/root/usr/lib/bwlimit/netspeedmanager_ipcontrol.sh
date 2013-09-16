@@ -6,6 +6,9 @@
 
 #whoami
 #echo $UID
+# usage: --activate|--deactivate IPADDRESS ratedown ceildown rateup ceilup nohttps username customhtbparent
+#nohttps = 1 to block direct https (e.g. force use of proxy)
+#customhtbparent htb parent custom id or 0 for none
 
 #this argument is the either "--activate" or "--deactivate"
 OPTION=$1
@@ -55,14 +58,14 @@ if [ "foo$OPTION" == "foo--activate" ]; then
 	echo "Masq for this client already active see"
     fi
     
+        /usr/lib/bwlimit/htb-gen new_device $IP $3 $4 $5 $6 $CUSTOMPARENT $USERNAME
     
-    /usr/lib/bwlimit/htb-gen tc_all $IP $3 $4 $5 $6 $CUSTOMPARENT
-    MARKERFILE=$(ls /var/current_BWL_clients/$IP-*)
-    if [ -e $MARKERFILE ]; then
-	echo $USERNAME > $MARKERFILE
-    else 
-	echo "Eh - marker file does not exist - something weird going on"
-    fi
+#    MARKERFILE=$(ls /var/current_BWL_clients/$IP-*)
+#    if [ -e $MARKERFILE ]; then
+#	echo $USERNAME > $MARKERFILE
+#    else 
+#	echo "Eh - marker file does not exist - something weird going on"
+#    fi
 else
     iptables --delete PostroutingOutbound -t nat -j MASQUERADE -s $IP
     /sbin/iptables --table nat --delete TransProxy \
@@ -74,6 +77,5 @@ else
     if [ "foo$IPTOUT" != "foo" ]; then
 	iptables --delete PostroutingOutbound -t nat --proto tcp --dport 443 -j DROP -s $IP
     fi
-    /usr/lib/bwlimit/htb-gen clear_client $IP
+    /usr/lib/bwlimit/htb-gen clear_device $IP $USERNAME
 fi
-

@@ -1,4 +1,16 @@
 #!/bin/bash
+#
+# Modified htb-gen for Net Speed Manager:
+#
+# Usage : Activate a user for an IP address
+#
+#  htb-gen tc_all $IP down_rate down_ceil up_rate up_ceil customparenthtb username
+# IP - IP address of client
+# Up/down rate/ceil - in kbps
+# customparenthtb - corresponds to /etc/htb-gen/htb-groups for control 
+# by group (0 for none)
+# e.g. htb-gen tc_all 192.168.1.200 50 100 50 100 0 hoda
+
 # set -x
 #       Program: htb-gen
 #       Version: 0.8.4
@@ -16,6 +28,8 @@
 # propagated, or distributed except according to the terms described in the
 # LICENSE file.
 # 
+
+
 #Script begins --here!-- don't touch bellow this line... but, if you do, mail me! :-)
 source "/etc/htb-gen/htb-gen.conf"
 down_rate=$3  
@@ -24,6 +38,7 @@ up_rate=$5
 up_ceil=$6
 htbcustomparent=$7
 command=$1
+username=$8
 
 #catch / limit squid traffic
 SQUIDPORT=$(/sbin/e-smith/db configuration getprop squid TCPPort)
@@ -78,7 +93,7 @@ fi
         then
 		mkdir /var/current_BWL_clients
 	fi
-	touch /var/current_BWL_clients/${ip[n]}-${class_start}
+	touch /var/current_BWL_clients/${ip[n]}-${class_start}-${username}
 	class_down[n]=$((class_start++)) 
 	class_prio_down[n]=$((class_start++))
 	class_dfl_down[n]=$((class_start++))
@@ -216,15 +231,16 @@ function do_iptables() {
 		local dir=$1 ip=$2 class_prio=$3 class_dfl=$4 host_dir= ports_dir=
 		case "$dir" in down) host_dir=d;ports_dir=s ;; up) host_dir=s;ports_dir=d ;;esac	
 		# iptables accept either "." & "/" chars in table naiming, is my lucky day :-) !
-		iptables -t mangle -N htb-gen.${dir}-${ip} 
-		iptables -t mangle -A htb-gen.${dir} -${host_dir} ${ip} -j htb-gen.${dir}-${ip}
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -m length --length 0:100 -j MARK --set-mark ${class_prio} 
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p udp -j MARK --set-mark ${class_prio}
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p icmp -j MARK --set-mark ${class_prio}
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -p tcp -m multiport --${ports_dir}ports $prio_ports -j MARK --set-mark ${class_prio}
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -m helper --helper ftp -j MARK --set-mark ${class_prio}
-		iptables -t mangle -A htb-gen.${dir}-${ip} -m mark --mark 0 -j MARK --set-mark ${class_dfl} 
-		iptables -t mangle -A htb-gen.${dir}-${ip} -j ACCEPT 
+		username=$5
+		iptables -t mangle -N htb-gen.${dir}-${username} 
+		iptables -t mangle -A htb-gen.${dir} -${host_dir} ${ip} -j htb-gen.${dir}-${username}
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -m length --length 0:100 -j MARK --set-mark ${class_prio} 
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -p udp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -p icmp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -p tcp -m multiport --${ports_dir}ports $prio_ports -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -m helper --helper ftp -j MARK --set-mark ${class_prio}
+		iptables -t mangle -A htb-gen.${dir}-${username} -m mark --mark 0 -j MARK --set-mark ${class_dfl} 
+		iptables -t mangle -A htb-gen.${dir}-${username} -j ACCEPT 
 	    }
 test -z "$(tc  filter show dev ${iface_up})" && test -z "$(tc  filter show dev ${iface_down})"
 if [ $? -eq 0 ]
@@ -240,8 +256,9 @@ then
 fi
 	
 	#for ((n=0;n<${#ip[@]};n++)); do
-		__do_iptables "down" ${ip[n]} ${class_prio_down[n]} ${class_dfl_down[n]}
-		__do_iptables "up"   ${ip[n]} ${class_prio_up[n]}   ${class_dfl_up[n]}
+		echo username = $username > username.txt
+		__do_iptables "down" ${ip[n]} ${class_prio_down[n]} ${class_dfl_down[n]} $username
+		__do_iptables "up"   ${ip[n]} ${class_prio_up[n]}  ${class_dfl_up[n]} $username
 	#done
 	}
 #function begins here
@@ -321,6 +338,71 @@ function clear_ip () {
 	iptables -t mangle -D htb-gen.down --jump htb-gen.down-${1} --dst ${1}
 	iptables -t mangle -X htb-gen.down-${1}
 }
+function clear_all () {
+
+	iptables -t mangle -F
+        iptables -t mangle -X
+        tc qdisc del dev ${iface_down} root
+        tc qdisc del dev ${iface_up} root
+        rm -rf /var/current_BWL_clients
+
+}
+function clear_username () {
+
+	username=$1
+     	client_start_id=`ls /var/current_BWL_clients/*${username}|tail -1|cut -f2 -d'-'`
+	test -z $(ls /var/current_BWL_clients|grep -v ${username})
+	if [ $? -eq 0 ]
+	then
+		clear_all
+		exit
+	fi	
+	echo $client_start_id
+	tc  filter show dev $iface_down|while read line
+					do
+						echo $line|grep $((client_start_id+1))||echo $line|grep $((client_start_id+2))
+						if [ $? -eq 0 ]
+						then
+							handle=`echo $line|cut -f 10 -d' '`
+							tc filter del dev $iface_down parent 1: protocol ip pref 200  handle $handle fw
+						fi
+					done
+	tc  filter show dev $iface_up|while read line
+                                        do
+                                                echo $line|grep $((client_start_id+4))||echo $line|grep $((client_start_id+5))
+                                                if [ $? -eq 0 ]
+                                                then
+                                                        handle=`echo $line|cut -f 10 -d' '`
+                                                        tc filter del dev $iface_up parent 1: protocol ip pref 200  handle $handle fw
+                                                fi
+                                        done
+	tc class del dev $iface_down classid 1:$((client_start_id+1))
+	tc class del dev $iface_down classid 1:$((client_start_id+2))
+	tc class del dev $iface_down classid 1:$client_start_id
+	tc class del dev $iface_up classid 1:$((client_start_id+4))
+	tc class del dev $iface_up classid 1:$((client_start_id+5))
+	tc class del dev $iface_up classid 1:$((client_start_id+3))
+	iptables -t mangle -F htb-gen.up-${username}
+	pushd /var/current_BWL_clients
+	for user_meta_data in `ls *${username}`
+	do 
+		client_ips=`echo $user_meta_data |cut -f1 -d '-'`
+		iptables -t mangle -D htb-gen.up --jump htb-gen.up-${username} --src ${client_ips}
+	done
+	popd
+	iptables -t mangle -X htb-gen.up-${username}
+
+	iptables -t mangle -F htb-gen.down-${username}
+	pushd /var/current_BWL_clients
+        for user_meta_data in `ls *${username}`
+        do 
+                client_ips=`echo $user_meta_data |cut -f1 -d '-'`
+                iptables -t mangle -D htb-gen.down --jump htb-gen.down-${username} --dst ${client_ips}
+        done
+        popd
+	iptables -t mangle -X htb-gen.down-${username}
+	rm -f /var/current_BWL_clients/*${username}
+}
 case "$command" in 
 tc_all|tc_only)
 	echo "custom parent = $htbcustomparent"
@@ -337,16 +419,47 @@ iptables|iptables_only)
 	load_conf $2  $down_rate  $down_ceil  $up_rate  $up_ceil
 	do_iptables 
 	;;
+new_device)
+	clientClassID=`ls /var/current_BWL_clients/*${8}|cut -f2 -d'-'`
+	test -z $clientClassID
+	if [ $? -eq 0 ]
+	then
+		echo "custom parent = $htbcustomparent"
+        	load_conf $2  $down_rate  $down_ceil  $up_rate  $up_ceil $htbcustomparent
+        	do_iptables
+        	do_conf "tc"
+		exit
+	fi
+	test -z "$(iptables -t mangle -L htb-gen.down |grep ${2})" && test -z "$(iptables -t mangle -L htb-gen.up |grep ${2})"
+	if [ $? -eq 0 ]
+        then
+		iptables -t mangle -A htb-gen.down -d ${2} -j htb-gen.down-${8}	
+		iptables -t mangle -A htb-gen.up -s ${2} -j htb-gen.up-${8}	
+		touch /var/current_BWL_clients/${2}-${clientClassID}-${8}
+        else
+		echo "IP already configured"
+	fi
+	;;
+clear_device)
+	client_sessions=`ls /var/current_BWL_clients/*${3}|wc -l`
+	if [ $client_sessions -eq 1 ]
+	then
+		echo "This is the last device for the user, please note that all his session data will be deleted"
+		clear_username $3
+		exit
+	fi
+	iptables -t mangle -D htb-gen.down --jump htb-gen.down-${3} --dst ${2}
+	iptables -t mangle -D htb-gen.up --jump htb-gen.up-${3} --src ${2} 
+	rm /var/current_BWL_clients/${2}*
+	;;
 clear_all)
-	iptables -t mangle -F
-	iptables -t mangle -X 
-	tc qdisc del dev ${iface_down} root
-	tc qdisc del dev ${iface_up} root
-        rm -rf /var/current_BWL_clients
+	clear_all
 	;;
 clear_client)
-	clear_ip $2	
-
+	clear_ip $2
+	;;	
+clear_username)
+	clear_username $2
 	;;
         
 *)	cat <<-EOF
@@ -356,8 +469,11 @@ clear_client)
 	$0 htbinit_all	   #generates htb-init config files & load firewall rules
 	$0 htbinit_only    #generates htb-init config files only (no firewall)
 	$0 iptables        #execs firewall rules only (call it from your firewall script)
+	$0 new_device ip username #when user connects with a new device while having an active session
+	$0 clear_device ip username
 	$0 clear_all       #clears all clients,clears iptables, deletes all qdiscs
 	$0 clear_client	ip #clears the client with the specified ip 
+	$0 clear_username username #clears all session for user <username>
 	EOF
 	;;
 esac

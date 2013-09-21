@@ -430,7 +430,7 @@ new_device)
         	do_conf "tc"
 		exit
 	fi
-	test -z "$(iptables -t mangle -L htb-gen.down |grep ${2})" && test -z "$(iptables -t mangle -L htb-gen.up |grep ${2})"
+	test -z "$(iptables -t mangle -n -L htb-gen.down |grep ${2})" && test -z "$(iptables -t mangle -L -n htb-gen.up |grep ${2})"
 	if [ $? -eq 0 ]
         then
 		iptables -t mangle -A htb-gen.down -d ${2} -j htb-gen.down-${8}	

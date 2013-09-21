@@ -668,6 +668,8 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
     $current_status_arr = mysql_fetch_assoc($current_status_result);
 
     //check and see if this user is currently active with another IP - cut it if so
+    /* Do not do this anymore since multi device support is here ! */
+    /*
     if($active == true && $current_status_arr['active_ip_addr'] != "") {
         $ip_to_deactivate = $current_status_arr['active_ip_addr'];
         if($ip_to_deactivate != $ipaddr) {
@@ -678,6 +680,8 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
             exec("/usr/lib/bwlimit/timelimit -T 6 -t 5 /usr/sbin/tcpkill -i $myinterface host $ip_to_deactivate");
         }
     }
+     */
+     
 
     $currently_active = ($current_status_arr['active_ip_addr'] == $ipaddr);
 
@@ -707,7 +711,7 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
 	$rateup = intval($current_status_arr['rateup']);
 	$ceilup = intval($current_status_arr['ceilup']);
 	$blockdirecthttps = intval($current_status_arr['blockdirecthttps']);
-    $htbparentclass = intval($current_status_arr['htbparentclass']);
+        $htbparentclass = intval($current_status_arr['htbparentclass']);
     
 	//if the user is not within quota this function should only have been called when deprio poliy is active
 	//set their reserved rates to be only 'depriorate'

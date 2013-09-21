@@ -53,122 +53,134 @@ while sleep 10
 do
 	LOOPTIME=$(date '+%s')
 
+        USERNAMESDONE=""
+
+        #Begin main loop of users
 	for x in `ls $CLASSID_DIR`
 	do 		
-		IP=`echo $x|cut -f1 -d '-'`
-		#echo "===========Run for : $IP =================="
-		CLASSID=`echo $x|cut -f2 -d '-'`
-		uploadinfo=$(iptables -t mangle -L htb-gen.up-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2; } END{print totalbytes}')
-		downloadinfo=$(iptables -t mangle -L htb-gen.down-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2;} END{print totalbytes}')
-		
-		IPTABLERETURNVAL=$?
-		
-		if [ "$uploadinfo" == "" ]; then
-			echo "[ $(date) ] WARNING - invalid upload chain $x - no upload info here - iptables last said $IPTABLERETURNVAL"
-			continue
-		fi
+            IP=`echo $x|cut -f1 -d '-'`
+            USERNAME=`echo $x|cut -f3 -d '-'`
+            USERNAMEGREP=$(echo $USERNAMESDONE | grep $USERNAME)
+            if [ "$USERNAMEGREP" != "" ]; then
+                echo "user already counted"
+                continue
+            fi
 
-                if [ "$downloadinfo" == "" ]; then
-                        echo "[ $(date) ] WARNING - invalid download chain $x - no upload info here iptables last said $IPTABLERETURNVAL"
-                        continue
+            #echo "===========Run for : $IP =================="
+            CLASSID=`echo $x|cut -f2 -d '-'`
+            uploadinfo=$(iptables -t mangle -L htb-gen.up-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2; } END{print totalbytes}')
+            downloadinfo=$(iptables -t mangle -L htb-gen.down-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2;} END{print totalbytes}')
+
+            IPTABLERETURNVAL=$?
+
+            if [ "$uploadinfo" == "" ]; then
+                    echo "[ $(date) ] WARNING - invalid upload chain $x - no upload info here - iptables last said $IPTABLERETURNVAL"
+                    continue
+            fi
+
+            if [ "$downloadinfo" == "" ]; then
+                    echo "[ $(date) ] WARNING - invalid download chain $x - no upload info here iptables last said $IPTABLERETURNVAL"
+                    continue
+            fi
+
+            #Now calculate the transfer since the last run
+            #for each client keep a variable called bytecount_up_<CLASSID> and bytecount_down_<CLASSID>
+
+            #username will be stored in the file
+            USERNAME=$(cat $CLASSID_DIR/$x)
+
+            xfer_down=0
+            xfer_up=0
+
+
+            #echo "uploadinfo='$uploadinfo' downloadinfo='$downloadinfo'"
+
+            bytecount_up=$(eval "echo -n \$bytecount_up_$CLASSID")
+            bytecount_down=$(eval "echo -n \$bytecount_down_$CLASSID")
+            lasttime_checked=$(eval "echo -n \$lasttime_$CLASSID")
+
+
+            #echo "bytecount_down = $bytecount_down"
+
+            if [[ "$bytecount_down" != "" ]]; then 
+                    #echo "found prev down count"
+                    xfer_down=$(( $downloadinfo - $bytecount_down ))
+            else
+                    SAVEDCOUNT=0
+                    if [ -e $COUNT_DIR/down_$CLASSID ]; then
+                            test_xfer_down=$(cat $COUNT_DIR/down_$CLASSID)
+                            if [ $test_xfer_down -le $downloadinfo ]; then
+                                    #echo "found saved value $test_xfer_down"
+                                    SAVEDCOUNT=1
+                                    xfer_down=$(( $downloadinfo - $test_xfer_down ))
+                            fi
+                    fi
+
+                    if [ $SAVEDCOUNT == 0 ]; then
+                            xfer_down=$downloadinfo
+                    fi
+            fi
+
+            if [[ "$bytecount_up" != "" ]]; then 
+                    xfer_up=$(( $uploadinfo - $bytecount_up ))
+            else
+                SAVEDCOUNT=0
+                if [ -e $COUNT_DIR/up_$CLASSID ]; then
+                        test_xfer_up=$(cat $COUNT_DIR/up_$CLASSID)
+                        if [ $test_xfer_up -le $uploadinfo ]; then
+                                #echo "found saved value $test_xfer_up"
+                                SAVEDCOUNT=1
+                                xfer_up=$(( $uploadinfo - $test_xfer_up ))
+                        fi
                 fi
 
-		#Now calculate the transfer since the last run
-		#for each client keep a variable called bytecount_up_<CLASSID> and bytecount_down_<CLASSID>
-				
-		#username will be stored in the file
-		USERNAME=$(cat $CLASSID_DIR/$x)
+                if [ $SAVEDCOUNT == 0 ]; then
+                        xfer_up=$uploadinfo
+                fi
+            fi
 
-		xfer_down=0
-		xfer_up=0
+            #upload - based on source ip
+            MYSQL_STMT="";
+            real_xfer_up=$(( $xfer_up / 1 ))
+            $MYSQL_CMD bwlimits -e "insert into acct(ip_src, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_up', now(), now())"
+            check_mysql_returnval "$?" "acct"
 
+            #download - based on dest ip
+            real_xfer_down=$(( $xfer_down / 1 ))
+            #echo "xfer_down = $xfer_down"
+            $MYSQL_CMD bwlimits -e "insert into acct(ip_dst, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_down', now(), now())"
 
-		#echo "uploadinfo='$uploadinfo' downloadinfo='$downloadinfo'"
-	
-		bytecount_up=$(eval "echo -n \$bytecount_up_$CLASSID")
-		bytecount_down=$(eval "echo -n \$bytecount_down_$CLASSID")
-		lasttime_checked=$(eval "echo -n \$lasttime_$CLASSID")
+            #now define the variables for this client for the next time around to track.  Save to dir in case we get restarted
+            eval "bytecount_down_$CLASSID=$downloadinfo"
+            echo -n $downloadinfo > $COUNT_DIR/down_$CLASSID
 
+            eval "bytecount_up_$CLASSID=$uploadinfo"
+            echo -n $uploadinfo > $COUNT_DIR/up_$CLASSID
 
-		#echo "bytecount_down = $bytecount_down"
+            TIMENOW=$(date '+%s')
+            if [ "$lasttime_checked" != "" ]; then
+                    TIMEDIFF=$(( $LOOPTIME - $lasttime_checked ))
+                    KBPS_DOWN=$(( (( ( $xfer_down / $TIMEDIFF ) * 8 )/1024) ))
+                    KBPS_UP=$(( (( ( $xfer_up / $TIMEDIFF ) * 8 )/1024) ))
+                    CHAINOK=0
+                    if [ $KBPS_DOWN -ge 0 ]; then
+                            if [ $KBPS_UP  -ge 0 ]; then
+                                    $MYSQL_CMD bwlimits -e " INSERT INTO data_usage (username, kbps_up, kbps_down, stamp_inserted) VALUES ('$USERNAME', '$KBPS_UP', '$KBPS_DOWN', '$LOOPTIME')"
+                                    check_mysql_returnval "$?" "data_usage"
+                                    CHAINOK=1
+                            fi
+                    fi
 
-		if [[ "$bytecount_down" != "" ]]; then 
-			#echo "found prev down count"
-			xfer_down=$(( $downloadinfo - $bytecount_down ))
-		else
-			SAVEDCOUNT=0
-			if [ -e $COUNT_DIR/down_$CLASSID ]; then
-				test_xfer_down=$(cat $COUNT_DIR/down_$CLASSID)
-				if [ $test_xfer_down -le $downloadinfo ]; then
-					#echo "found saved value $test_xfer_down"
-					SAVEDCOUNT=1
-					xfer_down=$(( $downloadinfo - $test_xfer_down ))
-				fi
-			fi
+                    if [ $CHAINOK == 0 ]; then
+                            echo "$(date) : Warning : Looks like chain got reset - not inserting for this run on $x"
+                            #TODO - When this happens - reset counters
+                    fi
+            fi
 
-			if [ $SAVEDCOUNT == 0 ]; then
-				xfer_down=$downloadinfo
-			fi
-		fi
-	
-		if [[ "$bytecount_up" != "" ]]; then 
-                    	xfer_up=$(( $uploadinfo - $bytecount_up ))
-                else
-			SAVEDCOUNT=0
-			if [ -e $COUNT_DIR/up_$CLASSID ]; then
-                                test_xfer_up=$(cat $COUNT_DIR/up_$CLASSID)
-                                if [ $test_xfer_up -le $uploadinfo ]; then
-                                        #echo "found saved value $test_xfer_up"
-                                        SAVEDCOUNT=1
-                                        xfer_up=$(( $uploadinfo - $test_xfer_up ))
-                                fi
-                        fi
-
-			if [ $SAVEDCOUNT == 0 ]; then
-	                        xfer_up=$uploadinfo
-			fi
-        fi
-			
-		#upload - based on source ip
-		MYSQL_STMT="";
-		real_xfer_up=$(( $xfer_up / 1 ))
-		$MYSQL_CMD bwlimits -e "insert into acct(ip_src, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_up', now(), now())"
-		check_mysql_returnval "$?" "acct"
-
-		#download - based on dest ip
-		real_xfer_down=$(( $xfer_down / 1 ))
-		#echo "xfer_down = $xfer_down"
-		$MYSQL_CMD bwlimits -e "insert into acct(ip_dst, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_down', now(), now())"
-
-		#now define the variables for this client for the next time around to track.  Save to dir in case we get restarted
-		eval "bytecount_down_$CLASSID=$downloadinfo"
-		echo -n $downloadinfo > $COUNT_DIR/down_$CLASSID
-
-		eval "bytecount_up_$CLASSID=$uploadinfo"
-		echo -n $uploadinfo > $COUNT_DIR/up_$CLASSID
-
-		TIMENOW=$(date '+%s')
-		if [ "$lasttime_checked" != "" ]; then
-			TIMEDIFF=$(( $LOOPTIME - $lasttime_checked ))
-			KBPS_DOWN=$(( (( ( $xfer_down / $TIMEDIFF ) * 8 )/1024) ))
-			KBPS_UP=$(( (( ( $xfer_up / $TIMEDIFF ) * 8 )/1024) ))
-			CHAINOK=0
-			if [ $KBPS_DOWN -ge 0 ]; then
-				if [ $KBPS_UP  -ge 0 ]; then
-					$MYSQL_CMD bwlimits -e " INSERT INTO data_usage (username, kbps_up, kbps_down, stamp_inserted) VALUES ('$USERNAME', '$KBPS_UP', '$KBPS_DOWN', '$LOOPTIME')"
-					check_mysql_returnval "$?" "data_usage"
-					CHAINOK=1
-				fi
-			fi
-
-			if [ $CHAINOK == 0 ]; then
-				echo "$(date) : Warning : Looks like chain got reset - not inserting for this run on $x"
-				#TODO - When this happens - reset counters
-			fi
-		fi
-		
-		eval "lasttime_$CLASSID=$LOOPTIME"
-	done
+            eval "lasttime_$CLASSID=$LOOPTIME"
+            USERNAMESDONE="$USERNAMESDONE:$USERNAME:"
+        done
+        #end main loop of users
 
 	#Check on download / upload master speed
     	old_received_bytes=$received_bytes

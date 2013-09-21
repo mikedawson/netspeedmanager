@@ -60,16 +60,16 @@ do
 	do 		
             IP=`echo $x|cut -f1 -d '-'`
             USERNAME=`echo $x|cut -f3 -d '-'`
+		echo "username is $USERNAME"
             USERNAMEGREP=$(echo $USERNAMESDONE | grep $USERNAME)
             if [ "$USERNAMEGREP" != "" ]; then
                 echo "user already counted"
                 continue
             fi
 
-            #echo "===========Run for : $IP =================="
             CLASSID=`echo $x|cut -f2 -d '-'`
-            uploadinfo=$(iptables -t mangle -L htb-gen.up-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2; } END{print totalbytes}')
-            downloadinfo=$(iptables -t mangle -L htb-gen.down-${IP} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2;} END{print totalbytes}')
+            uploadinfo=$(iptables -t mangle -L htb-gen.up-${USERNAME} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2; } END{print totalbytes}')
+            downloadinfo=$(iptables -t mangle -L htb-gen.down-${USERNAME} -n -v -x|tail -n +3|tr -s ' '|awk -F' ' 'BEGIN{OFS=","} {totalbytes=$2;} END{print totalbytes}')
 
             IPTABLERETURNVAL=$?
 
@@ -85,9 +85,6 @@ do
 
             #Now calculate the transfer since the last run
             #for each client keep a variable called bytecount_up_<CLASSID> and bytecount_down_<CLASSID>
-
-            #username will be stored in the file
-            USERNAME=$(cat $CLASSID_DIR/$x)
 
             xfer_down=0
             xfer_up=0

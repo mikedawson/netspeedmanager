@@ -46,6 +46,16 @@ CREATE TABLE IF NOT EXISTS `data_usage` (
    KEY `username_index` (`username`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+CREATE TABLE IF NOT EXISTS `user_sessions` (
+  `username` varchar(255) NOT NULL,
+  `active_ip_addr` varchar(255) NOT NULL,
+  `last_ip_activity` bigint(20) default NULL,
+  `session_start_time` int(11) default NULL,
+  `login_method` varchar(32) default NULL,
+  `ipbytecount` bigint(20) default '0'
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
 CREATE TABLE IF NOT EXISTS `data_usage_total` (
   `dlspeed` bigint(20) default NULL,
   `ulspeed` bigint(20) default NULL,

@@ -18,6 +18,7 @@ $macaddr = $argv[3];
 
 if($evtname == "commit") {
     //Step 1 look up the ip address - if we have a different mac already active - cut it off
+    //this should not really happen because we should always have an expiry event beforehand...
     $existing_query1_sql = "SELECT * from macipcombos WHERE ipaddr = '$ipaddr'";
     $existing_query1_result = mysql_query($existing_query1_sql);
     if(mysql_num_rows($existing_query1_result) > 0) {
@@ -25,7 +26,7 @@ if($evtname == "commit") {
         echo "There is a recorded lease here\n";
         $existing_query1_assoc = mysql_fetch_assoc($existing_query1_result);
         if($existing_query1_assoc['macaddr'] != $macaddr) {
-            $usernamelookup_sql = "SELECT username FROM user_details WHERE active_ip_addr = '$ipaddr'";
+            $usernamelookup_sql = "SELECT username FROM user_sessions WHERE active_ip_addr = '$ipaddr'";
 	        echo "looking for user: $usernamelookup_sql \n";
             $usernamelookup_result = mysql_query($usernamelookup_sql);
             
@@ -73,7 +74,7 @@ if($evtname == "commit") {
     $delete_lease_sql = "DELETE FROM macipcombos WHERE ipaddr = '$ipaddr'";
     mysql_query($delete_lease_sql);
 
-    $findusername_sql = "select username FROM user_details WHERE active_ip_addr = '$ipaddr'";
+    $findusername_sql = "select username FROM user_sessions WHERE active_ip_addr = '$ipaddr'";
     $findusername_result = mysql_query($findusername_sql);
     if(mysql_num_rows($findusername_result) > 0) {
         $findusername_assoc = mysql_fetch_assoc($findusername_result);

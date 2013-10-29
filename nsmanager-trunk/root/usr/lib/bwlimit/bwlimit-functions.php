@@ -49,7 +49,6 @@ $days_squidnames = array(
 
 $BWLIMIT_ALREADY_CONNECTED = 0;
 
-$BWLIMIT_OVERQUOTA_POLICY=`/sbin/e-smith/db configuration getprop BWLimit exceedpolicy`;
 
 function connectdb() {
     global $BWLIMIT_DBHOST;
@@ -531,8 +530,7 @@ function checkquotas() {
 
     while(($userlist_assoc = mysql_fetch_assoc($userlist_result)) != null) {
         $username = $userlist_assoc['username'];
-	    $user_ipaddr = $userlist_assoc['active_ip_addr'];
-	    $htbparentclass =  $userlist_assoc['htbparentclass'];
+        $htbparentclass =  $userlist_assoc['htbparentclass'];
 
         $currently_within_quota = $userlist_assoc['within_quota'];
         echo "Doing quota check for $username ...\n";
@@ -584,19 +582,21 @@ function checkquotas() {
             }
         }
 
-        $update_ip_last_seen_time_frag = "";
         if($running_mode) {
             if($running_mode == "ByIP" && $useriplastseen[$username]) {
                 $my_current_time = $useriplastseen[$username];
-                $update_ip_last_seen_time_frag = ", `last_ip_activity` = $my_current_time ";
+                $update_ip_last_seen_sql = "UPDATE user_sessions set last_ip_activity = $my_current_time "
+                        . " WHERE username = '$username'";
+                mysql_query($update_ip_last_seen_sql);
                 $last_time_seen_formatted = date(DATE_RFC1036, $my_current_time);
+                
                 echo "Update useriplastseen for $username time = " .  $useriplastseen[$username] . " ($last_time_seen_formatted)\n";
             }
         }
 
         //TODO - check if they were within quota but are now out of quota to knock them out HERE
         $sql_quota_stat_update = "UPDATE `user_details` SET `within_quota` = $within_quota "
-            . " $update_ip_last_seen_time_frag WHERE `username` = '$username'";
+            . " WHERE `username` = '$username'";
         mysql_query($sql_quota_stat_update);
 
         //check and see if this is someone to deactivate...
@@ -629,18 +629,23 @@ function checkquotas() {
         	        $ceilup = intval(floatval($ceilup) * $factorup);
 		}
 
-		if($user_ipaddr	!= NULL && $user_ipaddr != "") {
-			$clientdel_cmd = "/usr/lib/bwlimit/htb-gen clear_client $userlist_assoc[active_ip_addr]";
-			$deprio_cmd = "/usr/lib/bwlimit/htb-gen tc_all $userlist_assoc[active_ip_addr] $ratedown $ceildown $rateup $ceilup $htbparentclass";
-			exec($clientdel_cmd);
-			echo "Deprio: Ran $clientdel_cmd\n";
-			exec($deprio_cmd);
-			echo "Deprio: Ran $deprio_cmd\n";
+                //find active 
+                $user_active_sessions_sql = "SELECT * FROM user_sessions WHERE username = '$username'";
+                $user_active_sessions_result = mysql_query($user_active_sessions_sql);
+                $user_active_sessions_arr = null;
+                
+                $devcount = 0;
+		while(($user_active_sessions_arr = mysql_fetch_assoc($user_active_sessions_result))){
+                        if($devcount == 0) {
+                            $clientdel_cmd = "/usr/lib/bwlimit/htb-gen clear_username $username";
+                            exec($clientdel_cmd);
+                        }
+			
+			$readdcmd = "/usr/lib/bwlimit/htb-gen new_device $userlist_assoc[active_ip_addr] $ratedown $ceildown $rateup $ceilup $htbparentclass $username";
+			exec($readdcmd);
+			echo "Deprio: Ran $readdcmd\n";
 			//mark the username
-			exec("/usr/lib/bwlimit/markusernamebyip.sh $user_ipaddr $username");
-			echo "Deprio: Ran /usr/lib/bwlimit/markusernamebyip.sh $user_ipaddr $username\n";
-		}else{
-			echo "Client to deprio is not really online actually...\n";
+			$devcount++;
 		}
         }
     }
@@ -662,38 +667,47 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
     global $BWLIMIT_DEPRIORATE;
 
     //check the current status
-    $current_status_sql = "SELECT username, ratedown, ceildown, rateup, ceilup, active_ip_addr, last_ip_activity, blockdirecthttps FROM user_details htbparentclass WHERE "
-        . " username = '$username'";
+    $current_status_sql = "SELECT user_details.username AS username, "
+         . " user_details.ratedown AS ratedown, "
+         . " user_details.ceildown AS ceildown, "
+         . " user_details.rateup AS rateup, "
+         . " user_details.ceilup AS ceilup, "
+         . " user_sessions.active_ip_addr AS active_ip_addr, "
+         . " user_sessions.last_ip_activity AS last_ip_activity, "
+         . " user_details.blockdirecthttps "
+         . "FROM user_details LEFT JOIN user_sessions ON user_details.username = user_sessions.username "
+         . "WHERE user_details.username = '$username'";
     $current_status_result = mysql_query($current_status_sql);
     $current_status_arr = mysql_fetch_assoc($current_status_result);
-
-    //check and see if this user is currently active with another IP - cut it if so
-    /* Do not do this anymore since multi device support is here ! */
-    /*
-    if($active == true && $current_status_arr['active_ip_addr'] != "") {
-        $ip_to_deactivate = $current_status_arr['active_ip_addr'];
-        if($ip_to_deactivate != $ipaddr) {
-            exec("/usr/lib/bwlimit/netspeedmanager_ipcontrol --deactivate $ip_to_deactivate");
-            //make sure that any existing connections are cut off
-            exec("/usr/lib/bwlimit/cutter $ip_to_deactivate");
-	    $myinterface = `/sbin/e-smith/db configuration getprop InternalInterface Name`;
-            exec("/usr/lib/bwlimit/timelimit -T 6 -t 5 /usr/sbin/tcpkill -i $myinterface host $ip_to_deactivate");
-        }
-    }
-     */
-     
+ 
 
     $currently_active = ($current_status_arr['active_ip_addr'] == $ipaddr);
 
     $sql = "";
+    
+    //to make sure we are not duplicating stuff...
+    $delete_session_sql = "";
+    
     if($active) {
+        /*
         $sql = "Update user_details set active_ip_addr = '$ipaddr', last_ip_activity = $current_time "
             . " , login_method = '$login_method', session_start_time = $current_time WHERE username = '$username'";
+         * 
+         */
+        $delete_session_sql = "DELETE FROM user_sessions WHERE username = '$username' AND active_ip_addr = '$ipaddr'";
+        $sql = "INSERT INTO user_sessions (username, active_ip_addr, last_ip_activity, session_start_time, login_method)"
+                    .   "VALUES ('$username', '$ipaddr', '$current_time', '$current_time', '$login_method')";
     }else {
         //we need to deactivate, remove it from the ip list and call commands to
         //block the previously recorded ip
-        $sql = "Update user_details set active_ip_addr = '' WHERE username = '$username'";
+        //$sql = "Update user_details set active_ip_addr = '' WHERE username = '$username'";
+        $sql = "DELETE FROM user_sessions WHERE username = '$username' AND active_ip_addr = '$ipaddr'";
     }
+    
+    if($delete_session_sql != "") {
+        mysql_query($delete_session_sql);
+    }
+    
     //echo "setting IP using $sql \n";
     mysql_query($sql);
 
@@ -733,8 +747,11 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
 		$rateup = intval(floatval($rateup) * $factorup);
 		$ceilup = intval(floatval($ceilup) * $factorup);
 	}
-
-        exec("/usr/lib/bwlimit/netspeedmanager_ipcontrol $iparg $ipaddr $ratedown $ceildown $rateup $ceilup $blockdirecthttps $username $htbparentclass");
+        
+        $ipcontrol_cmd = "/usr/lib/bwlimit/netspeedmanager_ipcontrol $iparg $ipaddr $ratedown $ceildown $rateup $ceilup $blockdirecthttps $username $htbparentclass";
+        echo "Run: $ipcontrol_cmd \n";
+        exec($ipcontrol_cmd);
+        
         //make sure that any existing connections are terminated
         if($active == false) {
             $kill_cmd = "/usr/lib/bwlimit/netspeedmanager_killclient $ipaddr";

@@ -19,8 +19,14 @@ if($BWLIMIT_ALREADY_CONNECTED) {
 	#
 	# Normal / non static IP sessions
 	#		
-	$current_user_query = "SELECT username, active_ip_addr FROM user_details WHERE active_ip_addr != \"\" "
+	/*$current_user_query = "SELECT user_details.username, user_sessions.active_ip_addr FROM user_details WHERE active_ip_addr != \"\" "
 	    . " AND last_ip_activity > $last_time_active AND (ip_addr is NULL or ip_addr = '')";
+         * 
+         */
+        $current_user_query = "SELECT user_details.username AS username, user_sessions.active_ip_addr "
+                . " FROM user_details LEFT JOIN user_sessions ON user_details.username = user_sessions.username"
+                . " WHERE user_sessions.active_ip_addr IS NOT NULL AND user_sessions.last_ip_activity > $last_time_active";
+        
 	$current_user_result = mysql_query($current_user_query);
 	$current_user_arr = null;
 	while(($current_user_arr = mysql_fetch_assoc($current_user_result))) {
@@ -41,9 +47,14 @@ if($BWLIMIT_ALREADY_CONNECTED) {
 		$static_cmd = "/usr/lib/bwlimit/netspeedmanager_ipcontrol --activate $static_arr[ip_addr] $static_arr[ratedown] $static_arr[ceildown] $static_arr[rateup] $static_arr[ceilup] $static_arr[blockdirecthttps] $static_arr[username] $static_arr[htbparentclass] ";
 	        echo "run for $username $static_cmd\n";
         	exec($static_cmd);
-	        $static_update_sql = "update user_details set login_method = 'static', active_ip_addr = '$static_arr[ip_addr]' "
-                        . " WHERE username = '$static_arr[username]'";
-        	mysql_query($static_update_sql);
+                //DELETE any existing reference to this session
+                $static_update_sql1 = "DELETE FROM user_sessions WHERE username = '$username'";
+                mysql_query($static_update_sql1);
+                
+                //Put in this static session now
+                $static_update_sql2 = "INSERT INTO user_sessions (username, active_ip_addr, login_method) "
+                        . " VALUES ('$static_arr[username]', '$static_arr[ip_addr]', 'static')";
+                mysql_query($static_update_sql2);
 	}
 
 	$start_time = time();

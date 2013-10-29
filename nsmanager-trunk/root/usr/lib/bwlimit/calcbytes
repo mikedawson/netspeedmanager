@@ -136,16 +136,21 @@ do
                 fi
             fi
 
+            #Since 22/Sept - this is obsolete
             #upload - based on source ip
-            MYSQL_STMT="";
-            real_xfer_up=$(( $xfer_up / 1 ))
-            $MYSQL_CMD bwlimits -e "insert into acct(ip_src, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_up', now(), now())"
-            check_mysql_returnval "$?" "acct"
+            #MYSQL_STMT="";
+            #real_xfer_up=$(( $xfer_up / 1 ))
+            #$MYSQL_CMD bwlimits -e "insert into acct(ip_src, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_up', now(), now())"
+            #check_mysql_returnval "$?" "acct"
 
             #download - based on dest ip
-            real_xfer_down=$(( $xfer_down / 1 ))
+            #real_xfer_down=$(( $xfer_down / 1 ))
             #echo "xfer_down = $xfer_down"
-            $MYSQL_CMD bwlimits -e "insert into acct(ip_dst, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_down', now(), now())"
+            #$MYSQL_CMD bwlimits -e "insert into acct(ip_dst, bytes, stamp_inserted, stamp_updated) VALUES ('$IP', '$real_xfer_down', now(), now())"
+
+            
+            total_bytes_xfer=$(( $xfer_up + $xfer_down ))
+            echo "xfer_up = $xfer_up : xfer_down = $xfer_down : total_bytes_xfer = $total_bytes_xfer"
 
             #now define the variables for this client for the next time around to track.  Save to dir in case we get restarted
             eval "bytecount_down_$CLASSID=$downloadinfo"
@@ -162,7 +167,7 @@ do
                     CHAINOK=0
                     if [ $KBPS_DOWN -ge 0 ]; then
                             if [ $KBPS_UP  -ge 0 ]; then
-                                    $MYSQL_CMD bwlimits -e " INSERT INTO data_usage (username, kbps_up, kbps_down, stamp_inserted) VALUES ('$USERNAME', '$KBPS_UP', '$KBPS_DOWN', '$LOOPTIME')"
+                                    $MYSQL_CMD bwlimits -e " INSERT INTO data_usage (username, kbps_up, kbps_down, bytes, stamp_inserted) VALUES ('$USERNAME', '$KBPS_UP', '$KBPS_DOWN','$total_bytes_xfer', '$LOOPTIME')"
                                     check_mysql_returnval "$?" "data_usage"
                                     CHAINOK=1
                             fi
@@ -172,6 +177,8 @@ do
                             echo "$(date) : Warning : Looks like chain got reset - not inserting for this run on $x"
                             #TODO - When this happens - reset counters
                     fi
+            else
+                $MYSQL_CMD bwlimits -e " INSERT INTO data_usage (username, kbps_up, kbps_down, bytes, stamp_inserted) VALUES ('$USERNAME', '0', '0','$total_bytes_xfer', '$LOOPTIME')"
             fi
 
             eval "lasttime_$CLASSID=$LOOPTIME"

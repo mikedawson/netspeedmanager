@@ -97,7 +97,7 @@ function check_login() {
     //see is there an active session for them right now
     $srcip = $_SERVER[REMOTE_ADDR];
     $timesince = time() - $ip_activity_timeout;
-    $find_ip_user_sql = "SELECT username FROM user_details WHERE active_ip_addr = '$srcip' "
+    $find_ip_user_sql = "SELECT username FROM user_sessions WHERE active_ip_addr = '$srcip' "
         . " AND last_ip_activity > $timesince";
     $find_ip_result = mysql_query($find_ip_user_sql);
     $find_ip_arr = null;
@@ -108,6 +108,7 @@ function check_login() {
     }
 
     //check and see if there is a cookie here...
+    /*
     if(isset($_COOKIE['bwlimits']) && isset($_COOKIE['bwlimits']['un'])) {    
         if(bwlimit_authenticate($_COOKIE['bwlimits']['un'],
                 $_COOKIE['bwlimits']['pw']) == true) {
@@ -120,7 +121,7 @@ function check_login() {
             return true;
         }
     }
-
+    */
     return false;
 }
 

@@ -18,24 +18,8 @@ require("/usr/lib/bwlimit/bwlimit-functions.php");
 
 connectdb();
 
-//Used to count bandwidth usage in this run, associated array using the username
-$userbwtotals = array();
-
-//array that counts the raw total in bytes (not token count)
-$userbwtotals_bytes = array();
-
-//count how much bandwidth the user saved through the cache...
-$userbwtotals_saved = array();
-$userbwtotals_saved_reqs = array();
 
 $userbwtotals_scheduledxfers = array();
-
-//used to check the last time that an ip address was seen
-$useriplastseen = array();
-
-//used to track the oldest entry that we have seen in the pmacct data so we know
-// what we can safely delete
-$pmacct_oldest_time = 0;
 
 $last_timestamp = 0;
 
@@ -48,35 +32,6 @@ if($DEBUG_CRON == 1) {
 }else {
     echo "Starting without debug mode enabled";
 }
-
-
-/**
- * This will check the last seen ip time on the username and update the cache
- * variable useriplastseen accordingly.
- * 
- * Time should be unix time (seconds since epoch)
- * 
- * @global <type> $useriplastseen
- * @param <type> $username
- * @param <type> $time 
- */
-function update_user_last_seen_cache($username, $time) {
-    global $useriplastseen;
-    global $ip_activity_timeout;
-
-    if(!$useriplastseen[$username]) {
-        $useriplastseen[$username] = intval($time);
-        echo "Set useriplastseen for $username = $time\n";
-    }
-
-    if($useriplastseen[$username]) {
-        $timeintval = intval($time);
-        if($timeintval > $useriplastseen[$username]) {
-            $useriplastseen[$username] = $timeintval;
-        }
-    }
-}
-
 
 /**
  * This function will run SQL that will clear an inactive IP address from the list
@@ -93,7 +48,7 @@ function clear_inactive_ips() {
 
 
     if($running_mode && $running_mode == "ByIP") {
-        $find_inactive_ips_sql = "SELECT * FROM user_details WHERE "
+        $find_inactive_ips_sql = "SELECT * FROM user_sessions WHERE "
             . "((unix_timestamp() - last_ip_activity) > $ip_activity_timeout AND  "
             . " active_ip_addr != '' AND active_ip_addr is not null AND login_method = 'web')";
 
@@ -111,377 +66,111 @@ function clear_inactive_ips() {
             fwrite($inactivity_fd, $inactive_logme);
             bwlimit_user_ip_control($username, $thisoldip, false, true);
         }
-
-        //the bwlimit_user_ip_control function should now update this per user itself
-
-
-        //$clear_old_ips_sql = "Update user_details SET active_ip_addr = '' WHERE "
-        //    . "(unix_timestamp() - last_ip_activity) > $ip_activity_timeout "
-        //    . " AND active_ip_addr != '' AND active_ip_addr IS NOT NULL";
-        //mysql_query($clear_old_ips_sql);
     }
 }
 
-/**
- * Given a result set with a username, time and bytes row this will count the
- * amount of bandwidth used by the user for any other protocol...
- *
- * Also does the update to the last timestamp seen
- *
- * @param <type> $resultset
- */
-function process_pmacct_result_set($resultset) {
-    global $userbwtotals;
-    global $userbwtotals_bytes;
-    global $pmacct_oldest_time;
-    global $cron_debug_fd;
-    global $DEBUG_CRON;
-    
-    $row = null;
-    while(($row = mysql_fetch_assoc($resultset)) != null) {
-        $username = $row['username'];
-        $time = intval($row['utime']);
-        if($time > $pmacct_oldest_time) {
-            $pmacct_oldest_time = $time;
-        }
-        
-        $bytecount = $row['bytes'];
-        $rate = getrate($time);
-        $bw_to_count = $rate * floatval($bytecount);
-
-        if(empty($userbwtotals[$username])) {
-            $userbwtotals[$username] = 0;
-        }
-        if(empty($userbwtotals_bytes[$username])) {
-            $userbwtotals_bytes[$username] = 0;
-        }
-
-        $userbwtotals[$username] += $bw_to_count;
-        $userbwtotals_bytes[$username] += floatval($bytecount);
-        
-        if($bytecount > 0) {
-            echo "\tFound $row[bytes] for user $username\n";
-            update_user_last_seen_cache($username, $time);
-        }
-        echo "User: $username : \t\t $bw_to_count tokens | $bytecount bytes (Rate = $rate)\n";
-    }   
-}
-
-
-
-/**
- * Count the bandwidth usage from the pmacct table.
+/*
+ * This will use the newly structured data_usage table and the bytes value
  * 
- * Update the IP last time seen information for the username if we are running 
- * in ByIP mode
- * 
- * Then delete the data that we have gone through
  */
-function process_pmacct_data() {
-    global $pmacct_oldest_time;
-    global $running_mode;
-    global $local_ip;
-    global $local_netmask;
-    global $userbwtotals;
-    global $userbwtotals_scheduledxfers;
-    global $userbwtotals_bytes;
-
-    $sql_setup_type_check = "SELECT setup_type FROM process_log";
-    $setup_type_result = mysql_query($sql_setup_type_check);
-    $setup_arr_assoc = mysql_fetch_assoc($setup_type_result);
-
-    $setup_type = $setup_arr_assoc['setup_type'];
-    if($setup_type == "ByIP") {
-        echo "doing PMACCT queries...\n\n";
-        $running_mode = "ByIP";
-
-        /*
-         * This query runs against the acct v1 table generated by pmacct
-         *
-         * It counts the sum of the bytes, gets the time so that we can see when
-         * the ip was last actie and in the where clause we do a netmask comparison
-         * so that we do not count local bandwidth (e.g. access to the shared drive)
-         *
-         * See also the inet_aton function here:
-         *  http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html
-         */
-	/*
-        $sql_outgoing = "select acct.bytes as bytes, user_details.username AS username, "
-            ."unix_timestamp(acct.stamp_inserted) as utime FROM acct, user_details "
-            . "WHERE acct.ip_dst = user_details.active_ip_addr ";
-	*/
-
-	$sql_outgoing = "select acct.bytes as bytes, acct.ip_dst as ip_dst, unix_timestamp(acct.stamp_inserted) as utime, 
-user_details.username as username FROM acct LEFT JOIN user_details ON acct.ip_dst = user_details.active_ip_addr WHERE (acct.ip_dst is 
-not null AND acct.ip_dst != '')";
-
-        echo "Outgoing count SQL: $sql_outgoing";
-        $outgoing_result = mysql_query($sql_outgoing);
-
-	/*
-        $sql_incoming = "select acct.bytes as bytes, user_details.username AS username, "
-            ."unix_timestamp(acct.stamp_inserted) as utime FROM acct, user_details "
-            . "WHERE acct.ip_src = user_details.active_ip_addr ";
-	*/
-	$sql_incoming = "select acct.bytes as bytes, acct.ip_src as ip_src, unix_timestamp(acct.stamp_inserted) as utime, 
-user_details.username as username FROM acct LEFT JOIN user_details ON acct.ip_src = user_details.active_ip_addr WHERE (acct.ip_src is 
-not null AND acct.ip_src != '')";
-	
-        echo "Incoming count SQL: $sql_incoming";
-        
-        $incoming_result_set = mysql_query($sql_incoming);
-
-        process_pmacct_result_set($outgoing_result);
-        process_pmacct_result_set($incoming_result_set);
-
-        echo "\n==============byte totals in pmacct count function=============\n";
-        var_dump($userbwtotals_bytes);
-
-        //TODO: Count bandwidth usage vs time per user
-
-        echo "=== CALCULATE BANDWIDTH USAGE IN KBPS ===";
-        echo "\n\n";
-        $get_user_kbps =  "select acct.bytes as bytes, sum(acct.bytes) as totalbytes,count(acct.bytes) * 30 as seconds, user_details.username AS username,unix_timestamp(acct.stamp_inserted) as utime FROM acct, user_details WHERE acct.ip_dst = user_details.active_ip_addr OR acct.ip_src = user_details.active_ip_addr group by username";
-        $set_user_kbps = "UPDATE user_details SET current_kbps=''";
-
-
-
-        //TODO: Check if there are only scheduled downloads going on here - if so still need to deal with it
-
-        mysql_query($set_user_kbps);
-        $get_user_kbps_result = mysql_query($get_user_kbps);
-        $get_user_kbps_arr = null;
-        while(($get_user_kbps_arr = mysql_fetch_assoc($get_user_kbps_result))){
-            $temp_kbps = (($get_user_kbps_arr[totalbytes]/$get_user_kbps_arr[seconds])*8)/1024;
-            $username = $get_user_kbps_arr[username];
-            $update_kbps = "UPDATE user_details SET current_kbps=".$temp_kbps." WHERE username = '".$get_user_kbps_arr[username]."'";
-            echo "$update_kbps";
-            mysql_query($update_kbps);
-            echo $get_user_kbps_arr[username]."Updated OK";
-            echo "\n";
-
-        }
-        echo "userbwtotals scheduled for update function\n";
-        var_dump($userbwtotals_scheduledxfers);
-        foreach($userbwtotals_scheduledxfers as $username => $scheduled_xfer) {
+function sum_user_bandwidth($username) {
+    $time_last_counted_sql = "SELECT last_counted_utime FROM user_details WHERE username = '$username'";
+    $time_last_counted_result = mysql_query($time_last_counted_sql);
+    $time_last_counted_arr = mysql_fetch_assoc($time_last_counted_result);
+    if($time_last_counted_arr) {
+        $time_last_counted = $time_last_counted_arr['last_counted_utime'];
+        $usage_sql = "SELECT SUM(bytes) AS sum, MAX(stamp_inserted) AS last_time FROM data_usage WHERE username = '$username' "
+                . " AND stamp_inserted > $time_last_counted ";
+        echo $usage_sql;
+        $usage_result = mysql_query($usage_sql);
+        $usage_arr = mysql_fetch_assoc($usage_result);
+        if($usage_arr) {
+            $bytes_count = $usage_arr['sum'];
+            $last_time = $usage_arr['last_time'];
+            $rate = getrate($time_last_counted);
             
-            //TODO: change this to use timestamps etc.
-            echo "Adding $scheduled_kbps to $username for scheduled transfers \n";
-            $scheduled_kbps = intval($scheduled_xfer);
-            $scheduled_query = "Update user_details SET current_kbps = current_kbps + $scheduled_kbps WHERE username = '$username'";
-            echo "run $scheduled_query \n";
-            mysql_query($scheduled_query);
-        }
+            echo "\tRate = $rate\n";
+            
+            $bw_to_count = $rate * floatval($bytes_count);
+            echo "user mike transferred $bytes_count since last count count $bw_to_count \n";
+            $days_since_epoch = day_since_epoch(time());
 
-        //Clear the old times
-        $clearout_query = "DELETE FROM acct WHERE unix_timestamp(stamp_inserted) <= $pmacct_oldest_time";
-        echo "Running $clearout_query \n";
-        mysql_query($clearout_query);
-    }
+            $update_stmt = "UPDATE `usage_logs` SET `usage` = `usage` + $bw_to_count ,"
+                . " `usage_bytes` = `usage_bytes` + $bytes_count  "
+                . " WHERE `userlogid` = '$username:$days_since_epoch' ";
 
-    var_dump($userbwtotals);
-}
+            echo " run update: $update_stmt\n\n";
+            mysql_query($update_stmt);
 
-
-/*
- * This function looks at the line, parses it and determines which user
- * used how much bandwidth in this entry.
- *
- * It counts according to the bandwidth 'rate' which is defined for this time
- *
- */
-function process_line($line) {
-    global $userbwtotals;
-    global $userbwtotals_bytes;
-    global $userbwtotals_saved;
-    global $userbwtotals_saved_reqs;
-    global $running_mode;
-    global $BWLIMIT_UPDATEFILTER;
-    global $BWLIMIT_CONNECTIONSPEED_EXISTING;
-
-    if(empty($userbwtotals[$user])) {
-        $userbwtotals[$user] = 0;
-    }
-
-
-    //$BWLIMIT_UPDATEFILTER = "/(archive.ubuntu.com|security.ubuntu.com|au.windowsupdate.com)/";
-    
-    //echo "Update Filter = $BWLIMIT_UPDATEFILTER";
-
-    //determine the user and size here
-    $line_parts = preg_split("/\s/", $line, -1,  PREG_SPLIT_NO_EMPTY);
-
-    //According to the normal squid log format - see squid.conf access_log for details
-    //TODO : Implement IP based processing here...
-    $user = $line_parts[7];
-    $size = $line_parts[4];
-    $status = $line_parts[3];
-    $time_elapsed = intval($line_parts[1]);
-    $logged_url = $line_parts[6];
-    //echo "status = $status ";
-
-    //if we saved
-    if(preg_match('/HIT/', $status)) {
-        $userbwtotals_saved_reqs[$user] += 1;
-        $userbwtotals_saved[$user] += intval($size);
-    }else {
-        //see if this was an update saved in apt-cache or the like... - calc in kbps
-        $xferrate = (($size * 8)/1024) / ($time_elapsed / 1000);
-        if($xferrate > $BWLIMIT_CONNECTIONSPEED_EXISTING) {
-            //then it was a hit...
-            $userbwtotals_saved_reqs[$user] += 1;
-            $userbwtotals_saved[$user] += intval($size);
-        }
-    }
-
-
-    //Because the first entry in the log is the timestamp in secondssinceepoch.millis
-    //so just look up to the first . to gets seconds since epoch
-    $utime_parts = explode(".", $line, 2);
-    $utime = intval($utime_parts[0]);
-    if($running_mode && $running_mode == "ByIP") {
-        update_user_last_seen_cache($user, $utime);
-    }
-
-    //uncount updates
-    $bw_to_count = getrate($utime) * floatval($size);
-    
-
-    if(preg_match($BWLIMIT_UPDATEFILTER, $logged_url)) {
-        echo " Uncount $bw_to_count for $user (update)\n";
-
-        $userbwtotals[$user] -= $bw_to_count;
-    }
-
-    //think this is actually being done in pmacct section
-    
-
-    //NOTE: This should not be counted here - we are counting it using pmacctd...
-
-    //determine the timerange that we are in
-    //$userbwtotals[$user] += $bw_to_count;
-
-
-    
-    //$userbwtotals_bytes[$user] += floatval($size);
-
-    
-}
-
-
-/*
- * This function will skip to the next log line that it has not yet processed
- * and then start calling process_line
- *
- * It will then update the usage database
- */
-function process_file($filename) {
-    global $userbwtotals;
-    global $running_mode;
-    global $DEBUG_CRON;
-
-    if($DEBUG_CRON == 1) {
-        echo "Opening $filename Squid log\n";
-    }
-
-    $fd = fopen($filename, "r");
-    $line = "";
-    $linecount = 0;
-
-    //double check the kind of setup that we have
-    $sql = "SELECT setup_type";
-
-
-
-    //find out the oldest timestamp we have looked at so far
-    $sql = "SELECT setup_type, last_processed_timestamp, size_last_counted, previous_first_timestamp FROM process_log";
-    $sql_result = mysql_query($sql);
-    $sql_result_arr = mysql_fetch_assoc($sql_result);
-    $last_timestamp_proc = $sql_result_arr['last_processed_timestamp'];
-    $last_timestamp_proc_float = floatval($last_timestamp_proc);
-    $running_mode = $sql_result_arr['setup_type'];
-
-    $process_zone = false;
-
-    $last_processed_timestamp = "";
-
-    $first_timestamp_in_file = "";
-
-    echo "Going through lines... ";
-    while(!feof($fd)) {
-        $line = fgets($fd);
-        
-        $parts = split(" ", $line, 2);
-        $timestamp = $parts[0];
-
-        if($linecount == 0) {
-            //this is the first line - see if this is the file that we last looked at
-            // if it is then seek ahead to save a lot of time...
-            $previous_first_timestamp = $sql_result_arr['previous_first_timestamp'];
-            $first_timestamp_in_file = $timestamp;
-            if($first_timestamp_in_file == $previous_first_timestamp) {
-                //this is the one we saw...
-                echo "First Timestamp in file = $first_timestamp_in_file\n, line = $line";
-                $bytes_to_skip = intval($sql_result_arr['size_last_counted']);
-                echo "Recognize this log... seeking... $bytes_to_skip bytes";
+            //check if this is a new user; if yes then create their record
+            if(mysql_affected_rows() < 1) {
+                $insert_stmt =
+                    "INSERT INTO `usage_logs` (`userlogid`, `user`, `dayindex`,  "
+                    . "`usage`, `usage_bytes`) VALUES ( "
+                    . "'$username:$days_since_epoch', '$username', '$days_since_epoch', "
+                    . "$bw_to_count, $bytes_count  )";
+                mysql_query($insert_stmt);
+                echo " ran $insert_stmt\n\n";
+            }
+            
+            //update the last seen time
+            //this needs to be done per ip for this user as one device might be inactive whilst another is active
+            $user_session_sql = "select username, active_ip_addr, ipbytecount FROM user_sessions WHERE username = '$username'";
+            $user_session_result = mysql_query($user_session_sql);
+            $user_session_arr = null;
+            $dirlist = array("up", "down");
+            while(($user_session_arr = mysql_fetch_assoc($user_session_result))) {
+                $ipbytecount = 0;
+                //this needs escaped before it is fed into grep so we get only exact whole matches
+                $ip_with_esc_codes = str_replace(".", "\\.", $user_session_arr['active_ip_addr']);
+                foreach($dirlist as $dir) {
+                    $byte_cmd = "/sbin/iptables -t mangle -L htb-gen.$dir -n -v -x | "
+                            . "grep htb-gen.$dir-$username | grep '$ip_with_esc_codes ' | awk ' { print $1 }'";
+                    
+                    $byte_result = `$byte_cmd`;
+                    //echo "\t byte result = $byte_result\n";
+                    if($byte_result != null && $byte_result != "") {
+                        //echo "\t\t its numerics\n";
+                        $ipbytecount += $byte_result;
+                    }
+                }
                 
-                fseek($fd, $bytes_to_skip);
+                //echo "Byte count $username / $user_session_arr[active_ip_addr] = $ipbytecount \n";
+                
+                if(intval($ipbytecount) > intval($user_session_arr['ipbytecount'])) {
+                    echo "\tACTIVITY from $username on $user_session_arr[active_ip_addr] found\n";
+                    $update_time_sql = "Update user_sessions set ipbytecount = '$ipbytecount', "
+                            . " last_ip_activity = '$last_time' "
+                            . " WHERE username = '$username' AND active_ip_addr = '"
+                            . $user_session_arr['active_ip_addr'] . "'";
+                    mysql_query($update_time_sql);
+                }
+                
             }
         }
-
-        
-
-
-        //check and see if we have reached somewhere to start processing
-        if(($process_zone == false) && (floatval($timestamp) > $last_timestamp_proc_float)) {
-            $process_zone = true;
-        }
-
-        if($process_zone && $timestamp != "") {
-            process_line($line);
-            $last_processed_timestamp = $timestamp;
-        }
-
-        $linecount++;
-        if($linecount % 100 == 0) {
-            echo $linecount . ", ";
-        }
     }
-
-    //update the time that I last looked at the logs
-    if($last_processed_timestamp != "") {
-        $filesize_processed = filesize($filename);
-        $last_ts_sql = "UPDATE `process_log` set last_processed_timestamp = '$last_processed_timestamp', "
-            . " previous_first_timestamp = '$first_timestamp_in_file', size_last_counted = '$filesize_processed' "
-            . " WHERE servicename = 'squid'";
-        mysql_query($last_ts_sql);
-        echo "Updated timestamp\n";
-    }
-
 }
 
-
-echo "hmmm...\n\n";
+function sum_all_users_bandwidth() {
+    $userlist_sql = "SELECT DISTINCT username FROM user_sessions";
+    $userlist_result = mysql_query($userlist_sql);
+    $userlist_arr = null;
+    while(($userlist_arr = mysql_fetch_assoc($userlist_result))) {
+        sum_user_bandwidth($userlist_arr['username']);
+    }
+}
 
 //Load fundamentals of the system setup
 init_load_sysvals();
 
-
-//Go through pmacct data
-echo "Processing pmacct data\n";
-process_pmacct_data();
-
-
-
-//need a function to count that bandwidth recorded in the vars...
+//Sum up bandwidth
+sum_all_users_bandwidth();
 
 
 //Check the quotas and block whoever exceeded it.   Also update when this ip was last active
 echo "\n===Calling checkquotas()===\n";
 checkquotas();
 
-echo "\n=== Recording Bandwidth Usage===\n";
-insert_all_bandwidth_usage();
 
 //Run a query to clear out the ip addresses that are now inactive
 clear_inactive_ips();

@@ -48,12 +48,12 @@ if($login_ok == TRUE) {
                 bwlimit_user_ip_control($username, $ipaddr_src, true);
                 include("bwlimit_user_post_login.php");
             }else {
-		        if($BWLIMIT_EXCEEDPOLICY == "cutoff") {
-                        	include("bwlimit_user_post_login_overquota.php");
-		        }else {
-			        bwlimit_user_ip_control($username, $ipaddr_src, true);
-			        include("bwlimit_user_post_login-deprio.php");
-		        }
+                if($BWLIMIT_EXCEEDPOLICY == "cutoff") {
+                        include("bwlimit_user_post_login_overquota.php");
+                }else {
+                    bwlimit_user_ip_control($username, $ipaddr_src, true);
+                    include("bwlimit_user_post_login-deprio.php");
+                }
             }
             ?>
 

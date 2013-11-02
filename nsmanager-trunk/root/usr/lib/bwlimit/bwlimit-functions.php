@@ -680,9 +680,11 @@ function bwlimit_user_ip_control($username, $ipaddr, $active, $forcerun = false,
     $current_status_result = mysql_query($current_status_sql);
     $current_status_arr = mysql_fetch_assoc($current_status_result);
  
-
-    $currently_active = ($current_status_arr['active_ip_addr'] == $ipaddr);
-
+    $check_active_now_sql = "SELECT active_ip_addr FROM user_sessions WHERE username = '$username' AND active_ip_addr = '$ipaddr' ";
+    $check_active_now_result = mysql_query($check_active_now_sql);
+    $num_results = mysql_num_rows($check_active_now_result);
+    
+    $currently_active = $num_results;
     $sql = "";
     
     //to make sure we are not duplicating stuff...

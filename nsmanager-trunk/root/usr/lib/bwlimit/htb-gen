@@ -210,7 +210,7 @@ fi
 
         if [ "$_customparent_down" == "0" ]; then
 		_customparent_down=$c_parent_d
-		_customaprent_up=$c_parent_u
+		_customparent_up=$c_parent_u
 	fi
 	
 	

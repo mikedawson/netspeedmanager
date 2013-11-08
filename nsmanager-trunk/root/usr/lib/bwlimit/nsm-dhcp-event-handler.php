@@ -23,7 +23,7 @@ if($evtname == "commit") {
     $existing_query1_result = mysql_query($existing_query1_sql);
     if(mysql_num_rows($existing_query1_result) > 0) {
         //check if the mac address is a mis match
-        echo "There is a recorded lease here\n";
+        echo "There is a recorded lease here - e.g. different device to the one we know\n";
         $existing_query1_assoc = mysql_fetch_assoc($existing_query1_result);
         if($existing_query1_assoc['macaddr'] != $macaddr) {
             $usernamelookup_sql = "SELECT username FROM user_sessions WHERE active_ip_addr = '$ipaddr'";

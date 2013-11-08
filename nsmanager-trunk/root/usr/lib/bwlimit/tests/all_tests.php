@@ -10,6 +10,7 @@ class AllTests extends TestSuite {
         $this->addFile('testdatabaseconnect.php');
         $this->addFile('testusercreate.php');
         $this->addFile('test_create_iptables_rules.php');
+        $this->addFile('testdhcpevents');
     }
 }
 ?>

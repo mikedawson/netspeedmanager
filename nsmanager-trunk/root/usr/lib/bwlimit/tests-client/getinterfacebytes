@@ -1,0 +1,6 @@
+#!/bin/bash
+
+
+
+line=$(cat /proc/net/dev | grep $interface | cut -d ':' -f 2 | awk '{print "received_bytes="$1, "transmitted_bytes="$9}')
+echo $line

@@ -1,10 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# This lists the users that are in the system and their bandwidth quotas
-#
-# Programmed by Mike Dawson, PAIWASTOON Networking Services Ltd. 2009
-# Free Software under GPL v2.
+# This panel will allow the administrator to set options for LDAP authentication
 #
 
  package    esmith::FormMagick::Panel::bwlimit_ldapauth;
@@ -44,10 +41,9 @@ sub modify_ldap_settings() {
     my $self = shift;
     my $q = $self->{cgi};
     my $bwlimit_setup_rec = $db->get("BWLimit");
-    my @prop_names = ('ldap_enabled', 'ldap_binddn', 'ldap_server');
-    foreach (@prop_names) {
-        $bwlimit_setup_rec->set_prop($_,
-            $q->param($_));
-    }
+    
+    $bwlimit_setup_rec->set_prop("ldap_enabled",
+	$q->param("ldap_enabled"))
             
+    return $self->success('SUCCESSFULLY_MODIFIED');
 }

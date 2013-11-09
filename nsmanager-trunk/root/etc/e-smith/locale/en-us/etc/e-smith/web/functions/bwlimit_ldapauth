@@ -46,7 +46,7 @@
 
 <entry>
     <base>LABEL_BWLIMIT_LDAPFILTERDESC</base>
-    <trans> ({username} will be replaced with the username)</trans>
+    <trans>username will be replaced with the username</trans>
 </entry>
 
 <entry>
@@ -64,14 +64,21 @@
     <base>LABEL_BWLIMIT_FIRSTNAMEFIELD</base>
     <trans>LDAP Firstname field</trans>
 </entry>
+
 <entry>
     <base>LABEL_BWLIMIT_SECONDNAMEFIELD</base>
     <trans>LDAP Second name field</trans>
 </entry>
+
 <entry>
     <base>LABEL_BWLIMIT_MAILFIELD</base>
     <trans>LDAP Mail Field</trans>
 </entry>
 
+<entry>
+    <base>SUCCESSFULLY_MODIFIED</base>
+    <trans>Settings updated successfully</trans>
+</entry>
 
+</lexicon>
 

@@ -1,0 +1,37 @@
+#!/usr/bin/perl -wT
+ # vim: ft=xml ts=4 sw=4 et:
+ #----------------------------------------------------------------------
+ # heading     : Bandwidth Management
+ # description : Authentication
+ # navigation  : 3000 3250
+ #----------------------------------------------------------------------
+ use strict;
+ use esmith::TestUtils;
+ use esmith::FormMagick::Panel::bwlimit_ldapauth;
+
+ my $fm = esmith::FormMagick::Panel::bwlimit_ldapauth->new();
+
+ $fm->display();
+
+ __DATA__
+ <form title="FORM_TITLE"
+     header="/etc/e-smith/web/common/head.tmpl"
+     footer="/etc/e-smith/web/common/foot.tmpl">
+
+     <page name="First" pre-event="print_status_message()">
+
+         <description>FORM_DESCRIPTION</description>
+      
+         
+
+         <field type="select"
+            id="ldapenabled"
+            options="'yes' => 'Yes', 'no' => 'No'">
+            <label>LABEL_BWLIMIT_LDAP_ENABLED</label>
+         </field>
+     </page>
+
+     
+ </form>
+
+

@@ -9,6 +9,7 @@ panel_link("bwlimit_customlist", $panel);
 panel_link("bwlimit_groups", $panel);
 panel_link("bwlimit_mainopts", $panel);
 panel_link("bwlimit_timeranges", $panel);
+panel_link("bwlimit_ldapauth", $panel);
 
 my $event = "user-modify";
 event_link("bwlimit_check_reset", "user-modify", "60");

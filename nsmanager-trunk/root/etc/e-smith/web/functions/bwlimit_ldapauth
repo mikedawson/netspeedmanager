@@ -29,7 +29,7 @@
          </field>
 
 
-         <field type="text" id="ldap_binddn">
+         <field type="text" id="ldap_binddn" value="get_ldap_opt_value('ldap_binddn')">
             <label>LABEL_BWLIMIT_BINDDN</label>
          </field>
 

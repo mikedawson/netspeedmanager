@@ -52,3 +52,8 @@ sub modify_ldap_settings() {
     } 
     return $self->success('SUCCESSFULLY_MODIFIED');
 }
+
+sub get_ldap_opt_value {
+    my $propname = shift;
+    return $db->get_prop("BWLimit", $propname);
+}

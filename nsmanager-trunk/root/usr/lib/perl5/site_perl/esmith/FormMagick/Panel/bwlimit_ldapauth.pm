@@ -41,9 +41,14 @@ sub modify_ldap_settings() {
     my $self = shift;
     my $q = $self->{cgi};
     my $bwlimit_setup_rec = $db->get("BWLimit");
-    
-    $bwlimit_setup_rec->set_prop("ldap_enabled",
-	$q->param("ldap_enabled"));
-            
+
+    my @prop_names = ('ldap_enabled', 'ldap_binddn', 'ldap_bindpass', 'ldap_server',
+        'ldap_port', 'ldap_usessl', 'ldap_checkcert', 'ldap_searchfilter', 'ldap_usernamefield',
+        'ldap_firstnamefield', 'ldap_secondnamefield', 'ldap_mailfield');
+
+    foreach (@prop_names) {
+        $bwlimit_setup_rec->set_prop($_,
+            $q->param($_));
+    } 
     return $self->success('SUCCESSFULLY_MODIFIED');
 }

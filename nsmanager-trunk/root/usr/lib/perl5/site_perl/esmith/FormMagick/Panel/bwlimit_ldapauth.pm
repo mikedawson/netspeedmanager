@@ -43,7 +43,7 @@ sub modify_ldap_settings() {
     my $bwlimit_setup_rec = $db->get("BWLimit");
     
     $bwlimit_setup_rec->set_prop("ldap_enabled",
-	$q->param("ldap_enabled"))
+	$q->param("ldap_enabled"));
             
     return $self->success('SUCCESSFULLY_MODIFIED');
 }

@@ -14,4 +14,7 @@ $TESTINTERFACE="wlan0";
 
 $TESTURL = "http://intranet.paiwastoon.net:7006/pashto-book1-built.tar.gz";
 
+$TESTSERVER="www.netspeedmanager.com";
+
+
 ?>

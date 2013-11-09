@@ -1036,5 +1036,91 @@ function check_pid_running($pid) {
     }
 }
 
+/*
+ * This will use the newly structured data_usage table and the bytes value
+ * 
+ */
+function sum_user_bandwidth($username) {
+    $time_last_counted_sql = "SELECT last_counted_utime FROM user_details WHERE username = '$username'";
+    $time_last_counted_result = mysql_query($time_last_counted_sql);
+    $time_last_counted_arr = mysql_fetch_assoc($time_last_counted_result);
+    if($time_last_counted_arr) {
+        $time_last_counted = $time_last_counted_arr['last_counted_utime'];
+        $usage_sql = "SELECT SUM(bytes) AS sum, MAX(stamp_inserted) AS last_time FROM data_usage WHERE username = '$username' "
+                . " AND stamp_inserted > $time_last_counted ";
+        echo $usage_sql;
+        $usage_result = mysql_query($usage_sql);
+        $usage_arr = mysql_fetch_assoc($usage_result);
+        if($usage_arr) {
+            $bytes_count = $usage_arr['sum'];
+            $last_time = $usage_arr['last_time'];
+            $rate = getrate($time_last_counted);
+            
+            echo "\tRate = $rate\n";
+            
+            $bw_to_count = $rate * floatval($bytes_count);
+            echo "user mike transferred $bytes_count since last count count $bw_to_count \n";
+            $days_since_epoch = day_since_epoch(time());
+
+            $update_stmt = "UPDATE `usage_logs` SET `usage` = `usage` + $bw_to_count ,"
+                . " `usage_bytes` = `usage_bytes` + $bytes_count  "
+                . " WHERE `userlogid` = '$username:$days_since_epoch' ";
+
+            echo " run update: $update_stmt\n\n";
+            mysql_query($update_stmt);
+
+            //check if this is a new user; if yes then create their record
+            if(mysql_affected_rows() < 1) {
+                $insert_stmt =
+                    "INSERT INTO `usage_logs` (`userlogid`, `user`, `dayindex`,  "
+                    . "`usage`, `usage_bytes`) VALUES ( "
+                    . "'$username:$days_since_epoch', '$username', '$days_since_epoch', "
+                    . "$bw_to_count, $bytes_count  )";
+                mysql_query($insert_stmt);
+                echo " ran $insert_stmt\n\n";
+            }
+            
+            //update the last seen time
+            //this needs to be done per ip for this user as one device might be inactive whilst another is active
+            $user_session_sql = "select username, active_ip_addr, ipbytecount FROM user_sessions WHERE username = '$username'";
+            $user_session_result = mysql_query($user_session_sql);
+            $user_session_arr = null;
+            $dirlist = array("up", "down");
+            while(($user_session_arr = mysql_fetch_assoc($user_session_result))) {
+                $ipbytecount = 0;
+                //this needs escaped before it is fed into grep so we get only exact whole matches
+                $ip_with_esc_codes = str_replace(".", "\\.", $user_session_arr['active_ip_addr']);
+                foreach($dirlist as $dir) {
+                    /*$byte_cmd = "/sbin/iptables -t mangle -L htb-gen.$dir -n -v -x | "
+                            . "grep htb-gen.$dir-$username | grep '$ip_with_esc_codes ' | awk ' { print $1 }'";
+                     * 
+                     */
+                    $byte_cmd="/usr/lib/bwlimit/nsmtest_getbytecount $dir $username $ip_with_esc_codes";
+                    echo "byte command = $byte_cmd\n";
+                    $byte_result = `$byte_cmd`;
+                    echo "\t byte result = $byte_result\n";
+                    if($byte_result != null && $byte_result != "") {
+                        echo "\t\t its numerics\n";
+                        $ipbytecount += $byte_result;
+                    }
+                }
+                
+                echo "Byte count $username / $user_session_arr[active_ip_addr] = $ipbytecount \n";
+                
+                if(intval($ipbytecount) > intval($user_session_arr['ipbytecount'])) {
+                    echo "\tACTIVITY from $username on $user_session_arr[active_ip_addr] found\n";
+                    $update_time_sql = "Update user_sessions set ipbytecount = '$ipbytecount', "
+                            . " last_ip_activity = '$last_time' "
+                            . " WHERE username = '$username' AND active_ip_addr = '"
+                            . $user_session_arr['active_ip_addr'] . "'";
+                    mysql_query($update_time_sql);
+                }
+                
+            }
+        }
+    }
+}
+
+
 
 ?>

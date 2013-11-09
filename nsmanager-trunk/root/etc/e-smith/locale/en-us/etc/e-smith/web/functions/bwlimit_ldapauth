@@ -1,0 +1,77 @@
+<lexicon lang="en-us">
+<entry>
+        <base>FORM_TITLE</base>
+        <trans>Authentication Options</trans>
+</entry>
+
+<entry>
+    <base>LABEL_BWLIMIT_LDAP_ENABLED</base>
+    <trans>External LDAP Authentication enabled</trans>
+</entry>
+
+
+<entry>
+    <base>LABEL_BWLIMIT_LDAP_ENABLED</base>
+    <trans>External LDAP Authentication enabled</trans>
+</entry>
+
+<entry>
+    <base>LABEL_BWLIMIT_BINDDN</base>
+    <trans>LDAP bind dn (if required)</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_BINDPASS</base>
+    <trans>LDAP bind password (if required)</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_LDAPSERVER</base>
+    <trans>LDAP Server hostname</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_LDAPPORT</base>
+    <trans>LDAP Port (Default 389)</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_LDAPSSL</base>
+    <trans>Use SSL over LDAP</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_CHECKCERT</base>
+    <trans>Check LDAP ssl certificate</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_LDAPSEARCHFILTER</base>
+    <trans>LDAP Search filter</trans>
+</entry>
+
+<entry>
+    <base>LABEL_BWLIMIT_LDAPFILTERDESC</base>
+    <trans> ({username} will be replaced with the username)</trans>
+</entry>
+
+<entry>
+    <base>LABEL_BWLIMIT_USERNAMEFIELD</base>
+    <trans>LDAP Username field</trans>
+</entry>
+
+<entry>
+    <base>LABEL_BWLIMIT_LDAPUSERNAMEDESC</base>
+    <trans> (e.g. uid in openldap or sAMAccountName in Active Directory)</trans>
+</entry>
+
+
+<entry>
+    <base>LABEL_BWLIMIT_FIRSTNAMEFIELD</base>
+    <trans>LDAP Firstname field</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_SECONDNAMEFIELD</base>
+    <trans>LDAP Second name field</trans>
+</entry>
+<entry>
+    <base>LABEL_BWLIMIT_MAILFIELD</base>
+    <trans>LDAP Mail Field</trans>
+</entry>
+
+
+

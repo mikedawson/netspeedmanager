@@ -18,17 +18,64 @@
      header="/etc/e-smith/web/common/head.tmpl"
      footer="/etc/e-smith/web/common/foot.tmpl">
 
-     <page name="First" pre-event="print_status_message()">
+     <page name="First" pre-event="print_status_message()" post-event="modify_ldap_settings()">
 
          <description>FORM_DESCRIPTION</description>
-      
          
-
          <field type="select"
-            id="ldapenabled"
+            id="ldap_enabled"
             options="'yes' => 'Yes', 'no' => 'No'">
             <label>LABEL_BWLIMIT_LDAP_ENABLED</label>
          </field>
+
+
+         <field type="text" id="ldap_binddn">
+            <label>LABEL_BWLIMIT_BINDDN</label>
+         </field>
+
+         <field type="text" id="ldap_bindpass">
+            <label>LABEL_BWLIMIT_BINDPASS</label>
+         </field>
+
+         <field type="text" id="ldap_server">
+            <label>LABEL_BWLIMIT_LDAPSERVER</label>
+         </field>
+
+         <field type="text" id="ldap_port">
+            <label>LABEL_BWLIMIT_LDAPPORT</label>
+         </field>
+         
+         <field type="select" id="ldap_usessl" options="'yes' => 'Yes', 'no' => 'No'">
+            <label>LABEL_BWLIMIT_LDAPSSL</label>
+         </field>
+
+         <field type="select" id="ldap_checkcert" options="'yes' => 'Yes', 'no' => 'No'">
+            <label>LABEL_BWLIMIT_CHECKCERT</label>
+         </field>
+
+         <field type="text" id="ldap_searchfilter">
+            <label>LABEL_BWLIMIT_LDAPSEARCHFILTER</label>
+            <description>LABEL_BWLIMIT_LDAPFILTERDESC</description>
+         </field>
+
+         <field type="text" id="ldap_usernamefield">
+            <label>LABEL_BWLIMIT_USERNAMEFIELD</label>
+            <description>LABEL_BWLIMIT_LDAPUSERNAMEDESC</description>
+         </field>
+
+         <field type="text" id="ldap_firstnamefield">
+            <label>LABEL_BWLIMIT_FIRSTNAMEFIELD</label>
+         </field>
+
+         <field type="text" id="ldap_secondnamefield">
+            <label>LABEL_BWLIMIT_SECONDNAMEFIELD</label>
+         </field>
+
+         <field type="text" id="ldap_mailfield">
+            <label>LABEL_BWLIMIT_MAILFIELD</label>
+         </field>
+
+          <subroutine src="print_button('SAVE')" />
      </page>
 
      

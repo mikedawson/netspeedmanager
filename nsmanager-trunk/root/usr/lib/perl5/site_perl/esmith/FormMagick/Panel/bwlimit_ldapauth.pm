@@ -40,3 +40,14 @@
      return $self;
  }
 
+sub modify_ldap_settings() {
+    my $self = shift;
+    my $q = $self->{cgi};
+    my $bwlimit_setup_rec = $db->get("BWLimit");
+    my @prop_names = ('ldap_enabled', 'ldap_binddn', 'ldap_server');
+    foreach (@prop_names) {
+        $bwlimit_setup_rec->set_prop($_,
+            $q->param($_));
+    }
+            
+}

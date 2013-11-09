@@ -54,6 +54,7 @@ sub modify_ldap_settings() {
 }
 
 sub get_ldap_opt_value {
+    my $form = shift;
     my $propname = shift;
     return $db->get_prop("BWLimit", $propname);
 }

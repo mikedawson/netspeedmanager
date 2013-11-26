@@ -86,21 +86,33 @@ function bwlimit_authenticate($username, $pass) {
  * @param type $pass
  */
 function bwlimit_authenticate_ldap($username, $pass) {
-    global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT;
+    global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT, $LDAP_BINDDN, $LDAP_BINDPASS;
     
     $ldapurl = $LDAP_SERVER;
     if($LDAP_USESSL == "yes") {
         $ldapurl = "ldaps://" . $LDAP_SERVER;
     }
     
+    
     if($LDAP_CHECKCERT == "no") {
         putenv('LDAPTLS_REQCERT=never');
     }
     
     $ds = ldap_connect($ldapurl);
+    echo "Connected with $ldapurl \n";
     
-    echo "Connected with $ldapurl";
+    $ldap_binddn = null;
+    $ldap_pass = null;
+    if(trim($LDAP_BINDDN) != "") {
+        //ldap bind using credentials
+        $ldap_binddn = trim($LDAP_BINDDN);
+        $ldap_pass = $LDAP_BINDPASS;
+    }
     
+    $bind_result = ldap_bind($ds, $ldap_binddn, $ldap_pass);
+    echo "Bind results is $bind_result \n";
+    
+    $search_result = ldap_search($ds);
             
     return true;
 }

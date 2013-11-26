@@ -80,5 +80,10 @@
     <trans>Settings updated successfully</trans>
 </entry>
 
+<entry>
+    <base>LABEL_BWLIMIT_BASEDN</base>
+    <trans>LDAP Search Base DN</trans>
+</entry>
+
 </lexicon>
 

@@ -41,6 +41,10 @@
             <label>LABEL_BWLIMIT_LDAPSERVER</label>
          </field>
 
+         <field type="text" id="ldap_basedn" value="get_ldap_opt_value('ldap_basedn')">
+            <label>LABEL_BWLIMIT_BASEDN</label>
+         </field>
+
          <field type="text" id="ldap_port" value="get_ldap_opt_value('ldap_port')">
             <label>LABEL_BWLIMIT_LDAPPORT</label>
          </field>

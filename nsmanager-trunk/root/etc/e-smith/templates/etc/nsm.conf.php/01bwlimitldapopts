@@ -1,0 +1,16 @@
+{
+
+    my @prop_names = ('ldap_enabled', 'ldap_binddn', 'ldap_bindpass', 'ldap_server',
+        'ldap_port', 'ldap_usessl', 'ldap_checkcert', 'ldap_searchfilter', 'ldap_usernamefield',
+        'ldap_firstnamefield', 'ldap_secondnamefield', 'ldap_mailfield');
+    
+    my $db = esmith::ConfigDB->open();
+
+    my $bwlimit_setup_rec = $db->get("BWLimit");
+
+    foreach (@prop_names) {
+        $OUT .= "\$" . uc($_) . " = \"" . $bwlimit_setup_rec->prop($_) . "\";\n";
+    } 
+
+
+}

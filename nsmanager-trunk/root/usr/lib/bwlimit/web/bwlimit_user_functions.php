@@ -80,6 +80,31 @@ function bwlimit_authenticate($username, $pass) {
     return false;
 }
 
+/**
+ * Checks authentication against ldap
+ * @param type $username
+ * @param type $pass
+ */
+function bwlimit_authenticate_ldap($username, $pass) {
+    global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT;
+    
+    $ldapurl = $LDAP_SERVER;
+    if($LDAP_USESSL == "yes") {
+        $ldapurl = "ldaps://" . $LDAP_SERVER;
+    }
+    
+    if($LDAP_CHECKCERT == "no") {
+        putenv('LDAPTLS_REQCERT=never');
+    }
+    
+    $ds = ldap_connect($ldapurl);
+    
+    echo "Connected with $ldapurl";
+    
+            
+    return true;
+}
+
 
 /**
  * Should check and see if the user is logged in or not...

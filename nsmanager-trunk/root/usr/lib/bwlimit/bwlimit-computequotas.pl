@@ -123,6 +123,9 @@ for my $current_user (@user_list) {
     #look and see what should be the parent htb class
     my $parent_htb = get_htbparent_for_username($current_username);
 
+    #check the authentication source
+    my $authsource = $current_user->prop("BWLimitAuthSource") || "local";
+
     #see if this exists or not
     my $user_exists_sql = "SELECT username from user_details where username = '$current_username'";
     my $user_exists_query_handle = $DBIconnect->prepare($user_exists_sql);
@@ -133,7 +136,7 @@ for my $current_user (@user_list) {
 	    . " ratedown = $max_quota_so_far[3], ceildown = $max_quota_so_far[4], "
 	    . " rateup = $max_quota_so_far[5], ceilup = $max_quota_so_far[6], "
             . " mac_addr1 = '$mac_addr1', mac_addr2 = '$mac_addr2',ip_addr = '$ip_addr', blockdirecthttps = '$blockdirecthttps_sqlval', "
-            . " htbparentclass = $parent_htb " 
+            . " htbparentclass = $parent_htb, authsource =  '$authsource' " 
             . " WHERE username = '$current_username'";
         my $update_handle = $DBIconnect->prepare($update_sql);
         $update_handle->execute();

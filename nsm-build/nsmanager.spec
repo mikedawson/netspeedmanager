@@ -1,6 +1,6 @@
 %define name nsmanager
-%define version 0.0.6
-%define release 05	
+%define version 0.0.7
+%define release 15	
 
 Summary: SME Server Netspeed Manager Addon
 Name: %{name}
@@ -75,6 +75,7 @@ rm -rf $RPM_BUILD_ROOT
 #check on the database
 /usr/lib/bwlimit/upgrade-0.0.3-checkdb.php
 /usr/lib/bwlimit/upgrade-0.0.4-checkdb.php
+/usr/lib/bwlimit/upgrade-0.0.7-checkdb.php
 
 /etc/e-smith/events/actions/navigation-conf
 

@@ -46,6 +46,10 @@
              <label>LABEL_USER</label>
          </field>
 
+         <field type="select" value="get_current_BWLimitAuthSource()"  id="BWLimitAuthSource" options="'local'=>'This server', 'ldap' => 'LDAP Auth'">
+            <label>LABEL_BWAUTHSOURCE</label>
+         </field>
+
          <field type="text" id="BWLimitDaily" validation="integer">
              <label>LABEL_BWLIMITDAILY</label>
          </field>

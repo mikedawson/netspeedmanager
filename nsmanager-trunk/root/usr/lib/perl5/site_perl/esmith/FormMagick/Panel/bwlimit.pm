@@ -99,6 +99,17 @@ sub print_usage_summary {
     print $usage_info;
 }
 
+sub get_current_BWLimitAuthSource {
+    my $self = shift;
+    my $q = $self->{cgi};
+    my $username = $q->param("User");
+    $username =~ m/(.*)/;
+    $username = $1;
+    
+    my $acct_rec = $adb->get($username);
+    return $acct_rec->prop("BWLimitAuthSource") || "local";
+}
+
 
 sub print_bwlimit_table_users {
     my $self = shift;

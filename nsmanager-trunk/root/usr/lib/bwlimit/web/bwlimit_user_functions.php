@@ -87,6 +87,7 @@ function bwlimit_authenticate($username, $pass) {
  */
 function bwlimit_authenticate_ldap($username, $pass) {
     global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT, $LDAP_BINDDN, $LDAP_BINDPASS;
+    global $LDAP_BASEDN, $LDAP_SEARCHFILTER;
     
     $ldapurl = $LDAP_SERVER;
     if($LDAP_USESSL == "yes") {
@@ -112,9 +113,30 @@ function bwlimit_authenticate_ldap($username, $pass) {
     $bind_result = ldap_bind($ds, $ldap_binddn, $ldap_pass);
     echo "Bind results is $bind_result \n";
     
-    $search_result = ldap_search($ds);
-            
-    return true;
+    $search_filter_str = str_replace('%username', $username, $LDAP_SEARCHFILTER);
+    echo "Search str is: $search_filter_str for username $username\n";
+    
+    $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str);
+    echo "Number of entries returned is " . ldap_count_entries($ds, $search_result) . "\n";
+    
+    $search_info = ldap_get_entries($ds, $search_result);
+    $user_dn = $search_info[0]["dn"];
+    
+    echo "User dn is : $user_dn \n";
+    
+    ldap_unbind($ds);
+    
+    //now try and bind with the user dn
+    $ds2 = ldap_connect($ldapurl);
+    
+    $result = @ldap_bind($ds2, $user_dn, $pass);
+    
+    if($result == 1) {
+        return 1;
+    }else {
+        return -1;
+    }
+
 }
 
 

@@ -266,6 +266,10 @@ sub modify_bwlimit_account
 	$account->set_prop('BWLimitCountGroup', $q->param('BWLimitCountGroup'));
      }
 
+     if($q->param('BWLimitAuthSource')) {
+        $account->set_prop('BWLimitAuthSource', $q->param('BWLimitAuthSource'));
+     }
+
 
      my $account_type = $account->prop('type');
 

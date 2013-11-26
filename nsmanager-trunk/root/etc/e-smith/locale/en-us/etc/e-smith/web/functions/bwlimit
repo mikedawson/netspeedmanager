@@ -31,6 +31,10 @@
 	     <trans>User</trans>
 </entry>
 
+<entry>
+    <base>LABEL_BWAUTHSOURCE</base>
+    <trans>Authentication Source</trans>
+</entry>
             
 <entry>            
              <base>LABEL_BWLIMITDAILY</base>

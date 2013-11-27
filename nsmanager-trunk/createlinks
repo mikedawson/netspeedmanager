@@ -14,6 +14,7 @@ panel_link("bwlimit_ldapauth", $panel);
 my $event = "user-modify";
 event_link("bwlimit_check_reset", "user-modify", "60");
 event_link("bwlimit-init-user-rates", "user-create", "59");
+event_link("bwlimit-delete-user", "user-delete", "59");
 event_link("bwlimit_check_reset", "user-create", "60");
 event_link("bwlimit_check_reset", "user-delete", "60");
 

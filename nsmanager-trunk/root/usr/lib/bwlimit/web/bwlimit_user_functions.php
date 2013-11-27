@@ -126,6 +126,8 @@ function bwlimit_authenticate_ldap($username, $pass) {
     //now try and bind with the user dn
     $ds2 = bwlimit_ldap_connect();
     
+    echo "Attempting bind with $user_dn with pass $pass \n";
+    
     $result = @ldap_bind($ds2, $user_dn, $pass);
     @ldap_close($ds2);
     if($result == 1) {

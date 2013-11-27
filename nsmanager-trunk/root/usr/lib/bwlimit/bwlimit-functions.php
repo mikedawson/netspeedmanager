@@ -1179,14 +1179,33 @@ function bwlimit_ldap_getuserinfo($ds, $username, $attrs) {
     $search_filter_str = str_replace('%username', $username, $LDAP_SEARCHFILTER);
     echo "Search str is: $search_filter_str for username $username\n";
     
-    $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str);
+    $search_result = null;
+    if($attrs == null) {
+        $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str);
+    }else {
+        $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str, $attrs);
+    }
+    
     echo "Number of entries returned is " . ldap_count_entries($ds, $search_result) . "\n";
     
     $search_info = ldap_get_entries($ds, $search_result);
     
+    
     return $search_info;
 }
 
-
+/**
+ * 
+ * Remove all traces of this user from the Net Speed Manager system
+ * 
+ * @param type $username username to delete
+ */
+function bwlimit_delete_user($username) {
+    $del_sql1 = "DELETE FROM user_details WHERE username = '$username'";
+    mysql_query($del_sql1);
+    
+    $del_sql2 = "DELETE FROM user_sessions WHERE username = '$username'";
+    mysql_query($del_sql2);
+}
 
 ?>

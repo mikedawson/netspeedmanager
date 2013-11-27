@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# Delete the user named
+#
+
+/usr/lib/bwlimit/bwlimit-delete-user.php $2
+

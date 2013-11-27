@@ -27,6 +27,8 @@ class TestOfLDAPAuth extends UnitTestCase {
         $result = bwlimit_authenticate_ldap($TESTLDAPUSER, $TESTLDAPPASS);
         echo "In test result is $result\n";
         $this->assertEqual($result, 1);
+        bwlimit_add_user_from_ldap($TESTLDAPUSER);
+        
     }
     
 }

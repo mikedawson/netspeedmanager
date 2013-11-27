@@ -112,16 +112,10 @@ function bwlimit_authenticate_ldap($username, $pass) {
     
     $ds = bwlimit_ldap_connect();
     $bind_result = bwlimit_ldap_bind($ds);
-    
     echo "Bind results is $bind_result \n";
     
-    $search_filter_str = str_replace('%username', $username, $LDAP_SEARCHFILTER);
-    echo "Search str is: $search_filter_str for username $username\n";
+    $search_info = bwlimit_ldap_getuserinfo($ds, $username, null);
     
-    $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str);
-    echo "Number of entries returned is " . ldap_count_entries($ds, $search_result) . "\n";
-    
-    $search_info = ldap_get_entries($ds, $search_result);
     $user_dn = $search_info[0]["dn"];
     
     echo "User dn is : $user_dn \n";

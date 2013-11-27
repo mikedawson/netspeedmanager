@@ -1174,6 +1174,19 @@ function bwlimit_ldap_bind($ds) {
     return $bind_result;
 }
 
+function bwlimit_ldap_getuserinfo($ds, $username, $attrs) {
+    global $LDAP_SEARCHFILTER, $LDAP_BASEDN;
+    $search_filter_str = str_replace('%username', $username, $LDAP_SEARCHFILTER);
+    echo "Search str is: $search_filter_str for username $username\n";
+    
+    $search_result = ldap_search($ds, $LDAP_BASEDN, $search_filter_str);
+    echo "Number of entries returned is " . ldap_count_entries($ds, $search_result) . "\n";
+    
+    $search_info = ldap_get_entries($ds, $search_result);
+    
+    return $search_info;
+}
+
 
 
 ?>

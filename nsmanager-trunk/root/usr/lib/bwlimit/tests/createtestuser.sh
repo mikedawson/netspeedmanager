@@ -1,6 +1,6 @@
 #!/bin/sh
  
-USERNAME="testuserabc"
+USERNAME="testuserabc_create"
 PASSWORD="testuserpass"
 
 PATH=/sbin/e-smith:$PATH

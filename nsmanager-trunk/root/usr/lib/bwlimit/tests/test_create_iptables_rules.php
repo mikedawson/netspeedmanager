@@ -19,8 +19,17 @@ class TestCreateIPTablesRules extends UnitTestCase {
         global $BWLIMIT_DBNAME;
         global $BWLIMIT_DBUSER;
         global $BWLIMIT_DBPASS;
+        global $TESTUSERNAME;
+        
         mysql_connect("localhost", $BWLIMIT_DBUSER, $BWLIMIT_DBPASS);
         mysql_select_db($BWLIMIT_DBNAME);
+        
+        if(!is_dir("/home/e-smith/files/users/$TESTUSERNAME")) {
+            //make the user
+            $mkuser_cmd="/usr/lib/bwlimit/tests/createtestuser.sh";
+            $mkuser_cmd_result=`$mkuser_cmd`;
+        }
+        
     }
     
     

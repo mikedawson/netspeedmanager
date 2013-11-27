@@ -39,6 +39,14 @@ class TestOfLDAPAuth extends UnitTestCase {
         //make sure that this account is in the system
         $this->assertTrue(is_dir("/home/e-smith/files/users/$autouser_name"));
         
+        //now delete that account
+        $del_account_cmd1 = "/sbin/e-smith/db accounts delete $autouser_name";
+        $del_account_result1 = `$del_account_cmd1`;
+        
+        $del_account_cmd2 = "/sbin/e-smith/signal-event user-delete $autouser_name";
+        $del_account_result2 = `$del_account_cmd2`;
+        
+        $this->assertFalse(is_dir("/home/e-smith/files/users/$autouser_name"));
         
         
     }

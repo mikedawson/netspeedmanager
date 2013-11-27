@@ -1121,6 +1121,59 @@ function sum_user_bandwidth($username) {
     }
 }
 
+/**
+ * Do ldap_connect as we are configured to do via the control
+ * panel (nsm.conf.php)
+ * 
+ * @global type $LDAP_SERVER
+ * @global type $LDAP_USESSL
+ * @global type $LDAP_CHECKCERT
+ * @global type $LDAP_BINDDN
+ * @global type $LDAP_BINDPASS
+ * @return type
+ */
+function bwlimit_ldap_connect() {
+    global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT;
+            
+    $ldapurl = $LDAP_SERVER;
+    if($LDAP_USESSL == "yes") {
+        $ldapurl = "ldaps://" . $LDAP_SERVER;
+    }
+    
+    
+    if($LDAP_CHECKCERT == "no") {
+        putenv('LDAPTLS_REQCERT=never');
+    }
+    
+    $ds = ldap_connect($ldapurl);
+    echo "Connected with $ldapurl \n";
+    
+    return $ds;
+}
+
+/**
+ * Bind to the LDAP connection represented by $ds 
+ * with the management credentials (if any) in the settings
+ * 
+ * @global type $LDAP_BINDDN
+ * @global type $LDAP_BINDPASS
+ * @param type $ds
+ * @return type
+ */
+function bwlimit_ldap_bind($ds) {
+    global $LDAP_BINDDN, $LDAP_BINDPASS;
+    $ldap_binddn = null;
+    $ldap_pass = null;
+    if(trim($LDAP_BINDDN) != "") {
+        //ldap bind using credentials
+        $ldap_binddn = trim($LDAP_BINDDN);
+        $ldap_pass = $LDAP_BINDPASS;
+    }
+    
+    $bind_result = ldap_bind($ds, $ldap_binddn, $ldap_pass);
+    return $bind_result;
+}
+
 
 
 ?>

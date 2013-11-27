@@ -27,25 +27,50 @@ session_start();
  * @param <type> $pass Password to authenticate
  */
 function bwlimit_authenticate($username, $pass) {
+    global $LDAP_AUTOADD, $LDAP_ENABLED;
     $errormsg = "";
-
+    $auth_result = false;
+    
     //check and see where the authentication for this account should come from
     $check_authsource_sql = "SELECT authsource FROM user_details WHERE username = '"
             . mysql_real_escape_string($username) . "'";
     
     $check_authsource_result = mysql_query($check_authsource_sql);
-    $check_authsource_arr = mysql_fetch_assoc($check_authsource_result);
-    $authsource = $check_authsource_arr['authsource'];
     
-    $auth_result = false;
-    if($authsource == "local") {
-        $auth_result = bwlimit_authenticate_local($username, $pass);
-    }else {
-        //we need to use ldap for this one
-        $auth_result = bwlimit_authenticate_ldap($username, $pass);
-    }
+    if(mysql_num_rows($check_authsource_result) >= 1) {
+        $check_authsource_arr = mysql_fetch_assoc($check_authsource_result);
+        $authsource = $check_authsource_arr['authsource'];
 
+        if($authsource == "local") {
+            $auth_result = bwlimit_authenticate_local($username, $pass);
+        }else {
+            //we need to use ldap for this one
+            $auth_result = bwlimit_authenticate_ldap($username, $pass);
+        }
+    }else {
+        //see if we have ldap and auto add enabled
+        if($LDAP_ENABLED == "yes" && $LDAP_AUTOADD == "yes") {
+            //this might be a new account to add
+            $ldap_result = bwlimit_authenticate_ldap($username, $pass);
+            if($ldap_result == 1) {
+                //this is a new account - add it
+            }
+        }
+    }
+    
     return $auth_result;
+}
+
+/**
+ * This will put a username into the users_to_add table such that it will then
+ * be found by the cron job to add
+ * 
+ * @param type $username
+ */
+function bwlimit_request_newaccount_fromldap($username) {
+    $insert_sql = "INSERT INTO users_to_add(username, requested_utime, source) VALUES ('"
+            . mysql_real_escape_string($username) . "', " . time() . ", 'ldap')";
+    mysql_query($insert_sql);
 }
 
 function bwlimit_authenticate_local($username, $pass) {
@@ -82,31 +107,12 @@ function bwlimit_authenticate_local($username, $pass) {
  * @param type $pass
  */
 function bwlimit_authenticate_ldap($username, $pass) {
-    global $LDAP_SERVER, $LDAP_USESSL, $LDAP_CHECKCERT, $LDAP_BINDDN, $LDAP_BINDPASS;
+    
     global $LDAP_BASEDN, $LDAP_SEARCHFILTER;
     
-    $ldapurl = $LDAP_SERVER;
-    if($LDAP_USESSL == "yes") {
-        $ldapurl = "ldaps://" . $LDAP_SERVER;
-    }
+    $ds = bwlimit_ldap_connect();
+    $bind_result = bwlimit_ldap_bind($ds);
     
-    
-    if($LDAP_CHECKCERT == "no") {
-        putenv('LDAPTLS_REQCERT=never');
-    }
-    
-    $ds = ldap_connect($ldapurl);
-    echo "Connected with $ldapurl \n";
-    
-    $ldap_binddn = null;
-    $ldap_pass = null;
-    if(trim($LDAP_BINDDN) != "") {
-        //ldap bind using credentials
-        $ldap_binddn = trim($LDAP_BINDDN);
-        $ldap_pass = $LDAP_BINDPASS;
-    }
-    
-    $bind_result = ldap_bind($ds, $ldap_binddn, $ldap_pass);
     echo "Bind results is $bind_result \n";
     
     $search_filter_str = str_replace('%username', $username, $LDAP_SEARCHFILTER);
@@ -121,16 +127,17 @@ function bwlimit_authenticate_ldap($username, $pass) {
     echo "User dn is : $user_dn \n";
     
     ldap_unbind($ds);
+    @ldap_close($ds);
     
     //now try and bind with the user dn
-    $ds2 = ldap_connect($ldapurl);
+    $ds2 = bwlimit_ldap_connect();
     
     $result = @ldap_bind($ds2, $user_dn, $pass);
-    
+    @ldap_close($ds2);
     if($result == 1) {
         return 1;
     }else {
-        return -1;
+        return 0;
     }
 
 }

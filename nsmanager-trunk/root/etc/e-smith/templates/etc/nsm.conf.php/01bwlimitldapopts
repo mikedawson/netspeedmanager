@@ -9,7 +9,8 @@
     my $bwlimit_setup_rec = $db->get("BWLimit");
 
     foreach (@prop_names) {
-        $OUT .= "\$" . uc($_) . " = \"" . $bwlimit_setup_rec->prop($_) . "\";\n";
+        my $propval = $bwlimit_setup_rec->prop($_) || "";
+        $OUT .= "\$" . uc($_) . " = \"" . $propval . "\";\n";
     } 
 
 

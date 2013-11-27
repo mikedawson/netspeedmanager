@@ -85,5 +85,10 @@
     <trans>LDAP Search Base DN</trans>
 </entry>
 
+<entry>
+    <base>LABEL_BWLIMIT_LDAPAUTOADD</base>
+    <trans>Auto add users from LDAP</trans>
+</entry>
+
 </lexicon>
 

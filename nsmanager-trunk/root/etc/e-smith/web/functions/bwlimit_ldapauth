@@ -45,6 +45,10 @@
             <label>LABEL_BWLIMIT_BASEDN</label>
          </field>
 
+         <field type="select" id="ldap_autoadd" options="'yes' => 'Yes', 'no' => 'No'" value="get_ldap_opt_value('ldap_autoadd')">
+            <label>LABEL_BWLIMIT_LDAPAUTOADD</label>
+         </field>
+
          <field type="text" id="ldap_port" value="get_ldap_opt_value('ldap_port')">
             <label>LABEL_BWLIMIT_LDAPPORT</label>
          </field>

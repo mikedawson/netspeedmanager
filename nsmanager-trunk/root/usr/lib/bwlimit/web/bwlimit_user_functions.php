@@ -29,29 +29,26 @@ session_start();
 function bwlimit_authenticate($username, $pass) {
     $errormsg = "";
 
-    //check and see if this username is a guest username - if it is so check
-    //that instead of using the system auth and return the result
-    $check_guest_sql = "SELECT is_guest_account, guest_pw, expires_utime FROM user_details WHERE "
-        . "username = '$username' AND is_guest_account = 1";
+    //check and see where the authentication for this account should come from
+    $check_authsource_sql = "SELECT authsource FROM user_details WHERE username = '"
+            . mysql_real_escape_string($username) . "'";
     
-    $check_guest_result = mysql_query($check_guest_sql);
-    if(mysql_num_rows($check_guest_result) >= 1) {
-        //this is a guest account - check this...
-        //TODO: use mysql password encryption
-
-        echo "Detected guest account";
-
-        $guest_details = mysql_fetch_assoc($check_guest_result);
-
-        //check the password and that this account is still active.
-        if($guest_details['guest_pw'] == $pass &&
-        intval($guest_details['expires_utime']) < time()) {
-            return true;
-        }else {
-            return false;
-        }
+    $check_authsource_result = mysql_query($check_authsource_sql);
+    $check_authsource_arr = mysql_fetch_assoc($check_authsource_result);
+    $authsource = $check_authsource_arr['authsource'];
+    
+    $auth_result = false;
+    if($authsource == "local") {
+        $auth_result = bwlimit_authenticate_local($username, $pass);
+    }else {
+        //we need to use ldap for this one
+        $auth_result = bwlimit_authenticate_ldap($username, $pass);
     }
 
+    return $auth_result;
+}
+
+function bwlimit_authenticate_local($username, $pass) {
     //we are gonna use squid pam auth instead...
     $proc_descriptor = array(
         0 => array("pipe", "r"), //stdin is a pipe that the child will read from
@@ -76,7 +73,6 @@ function bwlimit_authenticate($username, $pass) {
         }
 
     }
-
     return false;
 }
 
